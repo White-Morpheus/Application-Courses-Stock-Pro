@@ -116,6 +116,95 @@ const PRESET_USER_COLORS: Record<string, string> = {
   Emma: "bg-indigo-500 text-white border-indigo-600"
 };
 
+const CLIENT_DEFAULT_CATEGORIES = [
+  { id: "fruits-legumes", name: "Fruits & Légumes", emoji: "🥦", order: 0 },
+  { id: "produits-laitiers", name: "Produits Laitiers", emoji: "🥛", order: 1 },
+  { id: "epicerie-salee", name: "Épicerie Salée", emoji: "🥫", order: 2 },
+  { id: "epicerie-sucree", name: "Épicerie Sucrée", emoji: "🍫", order: 3 },
+  { id: "boissons", name: "Boissons", emoji: "🥤", order: 4 },
+  { id: "viandes-poissons", name: "Viandes & Poissons", emoji: "🥩", order: 5 },
+  { id: "entretien-maison", name: "Entretien & Maison", emoji: "🧼", order: 6 },
+  { id: "hygiene-beaute", name: "Hygiène & Beauté", emoji: "🧴", order: 7 },
+  { id: "autre", name: "Autre", emoji: "📦", order: 8 }
+];
+
+const CLIENT_DEFAULT_PRODUCTS = [
+  {
+    id: "prod-1",
+    name: "Lait Demi-écrémé",
+    emoji: "🥛",
+    category: "produits-laitiers",
+    quantity: 3,
+    minQuantity: 2,
+    unit: "L",
+    price: 1.15,
+    expiryDates: [
+      { date: "2026-07-05", quantity: 2 },
+      { date: "2026-07-15", quantity: 1 }
+    ],
+    lastBoughtTimes: 3,
+    totalExpenses: 5.75
+  },
+  {
+    id: "prod-2",
+    name: "Pommes Gala",
+    emoji: "🍎",
+    category: "fruits-legumes",
+    quantity: 1,
+    minQuantity: 4,
+    unit: "pièces",
+    price: 0.40,
+    expiryDates: [
+      { date: "2026-07-08", quantity: 1 }
+    ],
+    lastBoughtTimes: 8,
+    totalExpenses: 6.40
+  },
+  {
+    id: "prod-3",
+    name: "Pâtes Penne Rigate",
+    emoji: "🍝",
+    category: "epicerie-salee",
+    quantity: 1.5,
+    minQuantity: 1,
+    unit: "kg",
+    price: 1.80,
+    expiryDates: [
+      { date: "2027-12-01", quantity: 1.5 }
+    ],
+    lastBoughtTimes: 4,
+    totalExpenses: 7.20
+  },
+  {
+    id: "prod-4",
+    name: "Yaourts Nature x4",
+    emoji: "🥣",
+    category: "produits-laitiers",
+    quantity: 1,
+    minQuantity: 2,
+    unit: "paquets",
+    price: 1.45,
+    expiryDates: [
+      { date: "2026-07-01", quantity: 1 }
+    ],
+    lastBoughtTimes: 12,
+    totalExpenses: 17.40
+  },
+  {
+    id: "prod-5",
+    name: "Jambon Cuit sans Couenne",
+    emoji: "🥩",
+    category: "viandes-poissons",
+    quantity: 0,
+    minQuantity: 1,
+    unit: "paquets",
+    price: 2.89,
+    expiryDates: [],
+    lastBoughtTimes: 5,
+    totalExpenses: 14.45
+  }
+];
+
 export default function App() {
   // ==========================================
   // ÉTATS GLOBAUX DE L'APPLICATION
@@ -293,9 +382,63 @@ export default function App() {
         setUsers(data.users);
       }
       setSyncError(null);
+
+      // Sauvegarder dans localStorage pour un futur usage hors-ligne
+      localStorage.setItem(`pantry_list_${listId}`, JSON.stringify(data));
     } catch (err: any) {
-      console.error(err);
-      setSyncError("Échec de la synchro en temps réel. Le serveur est-il actif ?");
+      console.warn("Échec de la récupération des données en ligne, bascule sur le cache local :", err);
+      
+      // Tentative de récupération depuis localStorage
+      const cached = localStorage.getItem(`pantry_list_${listId}`);
+      if (cached) {
+        try {
+          const data: ListData = JSON.parse(cached);
+          setListName(data.name);
+          setProducts(data.products || []);
+          const sortedCats = (data.categories || []).sort((a, b) => a.order - b.order);
+          setCategories(sortedCats);
+          setHistory(data.history || []);
+          setLogs(data.logs || []);
+          setLastModifiedAt(data.lastModifiedAt || "");
+          setLastModifiedBy(data.lastModifiedBy || "");
+          if (data.users && data.users.length > 0) {
+            setUsers(data.users);
+          }
+          // Note informative plutôt qu'une erreur bloquante
+          setSyncError("Mode local hors-ligne actif. Données lues depuis le cache du navigateur.");
+        } catch (parseErr) {
+          console.error("Échec du parsing du cache local :", parseErr);
+        }
+      } else {
+        // Initialiser avec les données de démonstration par défaut s'il n'y a aucun cache
+        const fallbackData: ListData = {
+          id: listId,
+          name: listId === "default" ? "Ma Liste de Courses" : `Liste : ${listId}`,
+          products: CLIENT_DEFAULT_PRODUCTS,
+          categories: CLIENT_DEFAULT_CATEGORIES,
+          history: [],
+          logs: [{
+            user: "Système",
+            date: new Date().toISOString(),
+            details: "Initialisation automatique de la liste locale hors-ligne."
+          }],
+          lastModifiedAt: new Date().toISOString(),
+          lastModifiedBy: "Système",
+          users: DEFAULT_USERS_LIST
+        };
+
+        setListName(fallbackData.name);
+        setProducts(fallbackData.products);
+        setCategories(fallbackData.categories);
+        setHistory(fallbackData.history);
+        setLogs(fallbackData.logs);
+        setLastModifiedAt(fallbackData.lastModifiedAt);
+        setLastModifiedBy(fallbackData.lastModifiedBy);
+        setUsers(fallbackData.users);
+
+        localStorage.setItem(`pantry_list_${listId}`, JSON.stringify(fallbackData));
+        setSyncError("Application initialisée localement (mode hors-ligne ou serveur indisponible).");
+      }
     } finally {
       if (showLoader) setIsSyncing(false);
     }
@@ -354,6 +497,17 @@ export default function App() {
       users: finalUsers
     };
 
+    // 1. Sauvegarde instantanée et locale pour une réactivité maximale (Optimistic UI)
+    localStorage.setItem(`pantry_list_${listId}`, JSON.stringify(payload));
+    setProducts(updatedProducts);
+    setCategories(updatedCategories.sort((a, b) => a.order - b.order));
+    setHistory(updatedHistory);
+    setLogs(updatedLogs);
+    setLastModifiedAt(payload.lastModifiedAt);
+    setLastModifiedBy(currentUser);
+    setUsers(finalUsers);
+
+    // 2. Tenter d'enregistrer sur le serveur d'API
     try {
       const res = await fetch(`/api/lists/${listId}`, {
         method: "POST",
@@ -363,7 +517,7 @@ export default function App() {
       if (!res.ok) throw new Error("Impossible d'enregistrer les données sur le serveur.");
       const data: ListData = await res.json();
       
-      // Mettre à jour les états locaux
+      // Mettre à jour avec les dernières données du serveur (en cas de modifications concurrentes)
       setProducts(data.products);
       setCategories(data.categories.sort((a, b) => a.order - b.order));
       setHistory(data.history);
@@ -375,8 +529,8 @@ export default function App() {
       }
       setSyncError(null);
     } catch (err: any) {
-      console.error(err);
-      setSyncError("Erreur d'écriture sur le serveur.");
+      console.warn("Échec d'enregistrement sur le serveur, sauvegardé uniquement en local :", err);
+      setSyncError("Modifications enregistrées localement dans le navigateur (serveur hors-ligne).");
     } finally {
       setIsSyncing(false);
     }
