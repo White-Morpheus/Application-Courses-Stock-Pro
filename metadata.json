@@ -1,0 +1,10 @@
+{
+  "name": "PantryPal",
+  "description": "Application de gestion de stock, liste de courses intelligente collaborative en temps réel et scan de tickets de caisse par IA.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
