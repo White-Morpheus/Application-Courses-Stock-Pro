@@ -30,6 +30,15 @@ const DEFAULT_CATEGORIES = [
   { id: "autre", name: "Autre", emoji: "📦", order: 8 }
 ];
 
+// Default stock locations
+const DEFAULT_STOCK_LOCATIONS = [
+  { id: "cuisine", name: "Cuisine (Général)", emoji: "🍳" },
+  { id: "frigo", name: "Réfrigérateur", emoji: "🥛" },
+  { id: "congelo", name: "Congélateur", emoji: "❄️" },
+  { id: "placard", name: "Placard / Épicerie", emoji: "🥫" },
+  { id: "cave", name: "Cave / Cellier", emoji: "🍾" }
+];
+
 // Default sample products
 const DEFAULT_PRODUCTS = [
   {
@@ -37,6 +46,7 @@ const DEFAULT_PRODUCTS = [
     name: "Lait Demi-écrémé",
     emoji: "🥛",
     category: "produits-laitiers",
+    stockLocation: "frigo",
     quantity: 3,
     minQuantity: 2,
     unit: "L",
@@ -53,6 +63,7 @@ const DEFAULT_PRODUCTS = [
     name: "Pommes Gala",
     emoji: "🍎",
     category: "fruits-legumes",
+    stockLocation: "cuisine",
     quantity: 1,
     minQuantity: 4,
     unit: "pièces",
@@ -68,6 +79,7 @@ const DEFAULT_PRODUCTS = [
     name: "Pâtes Penne Rigate",
     emoji: "🍝",
     category: "epicerie-salee",
+    stockLocation: "placard",
     quantity: 1.5,
     minQuantity: 1,
     unit: "kg",
@@ -83,6 +95,7 @@ const DEFAULT_PRODUCTS = [
     name: "Yaourts Nature x4",
     emoji: "🥣",
     category: "produits-laitiers",
+    stockLocation: "frigo",
     quantity: 1,
     minQuantity: 2,
     unit: "paquets",
@@ -98,6 +111,7 @@ const DEFAULT_PRODUCTS = [
     name: "Jambon Cuit sans Couenne",
     emoji: "🥩",
     category: "viandes-poissons",
+    stockLocation: "frigo",
     quantity: 0,
     minQuantity: 1,
     unit: "paquets",
@@ -154,6 +168,25 @@ function getGeminiClient(): GoogleGenAI {
 
 // API Routes
 
+// 0. Get list of all lists summaries (List of existing lists)
+app.get("/api/lists", (req, res) => {
+  const currentStore = readDataStore();
+  if (!currentStore.lists) {
+    currentStore.lists = {};
+  }
+  
+  // Return list of available lists with basic metadata
+  const listSummaries = Object.values(currentStore.lists).map((list: any) => ({
+    id: list.id,
+    name: list.name || `Liste : ${list.id}`,
+    lastModifiedAt: list.lastModifiedAt || new Date().toISOString(),
+    lastModifiedBy: list.lastModifiedBy || "Système",
+    itemsCount: list.products ? list.products.length : 0
+  }));
+  
+  res.json(listSummaries);
+});
+
 // 1. Get List (with auto initialization)
 app.get("/api/lists/:listId", (req, res) => {
   const { listId } = req.params;
@@ -170,6 +203,7 @@ app.get("/api/lists/:listId", (req, res) => {
       name: listId === "default" ? "Ma Liste de Courses & Stock" : `Liste : ${listId}`,
       products: [...DEFAULT_PRODUCTS],
       categories: [...DEFAULT_CATEGORIES],
+      stockLocations: [...DEFAULT_STOCK_LOCATIONS],
       history: [
         {
           id: "hist-1",
@@ -197,6 +231,12 @@ app.get("/api/lists/:listId", (req, res) => {
       users: ["Lucas", "Marie", "Sophie", "Thomas", "Emma"]
     };
     writeDataStore(currentStore);
+  } else {
+    // If it exists but doesn't have stockLocations yet, add them
+    if (!currentStore.lists[listId].stockLocations) {
+      currentStore.lists[listId].stockLocations = [...DEFAULT_STOCK_LOCATIONS];
+      writeDataStore(currentStore);
+    }
   }
 
   res.json(currentStore.lists[listId]);
@@ -220,6 +260,7 @@ app.post("/api/lists/:listId", (req, res) => {
     name: updatedData.name || currentStore.lists[listId]?.name || `Liste : ${listId}`,
     products: updatedData.products || [],
     categories: updatedData.categories || DEFAULT_CATEGORIES,
+    stockLocations: updatedData.stockLocations || currentStore.lists[listId]?.stockLocations || DEFAULT_STOCK_LOCATIONS,
     history: updatedData.history || [],
     logs: updatedData.logs || [],
     lastModifiedAt: timestamp,

@@ -46,6 +46,180 @@ import {
 } from "recharts";
 
 // ==========================================
+// OUTILS ET FONCTIONS UTILITAIRES POUR IMAGES
+// ==========================================
+
+const handleUploadBase64 = (file: File, callback: (base64: string) => void) => {
+  const reader = new FileReader();
+  reader.onloadend = () => {
+    callback(reader.result as string);
+  };
+  reader.readAsDataURL(file);
+};
+
+const renderItemIcon = (emoji: string, imageUrl?: string, className = "w-8 h-8 flex items-center justify-center shrink-0 text-base bg-white border border-slate-100 rounded-lg shadow-sm") => {
+  if (imageUrl && imageUrl.trim()) {
+    return (
+      <div className="relative w-8 h-8 flex items-center justify-center shrink-0 overflow-hidden rounded-lg bg-white shadow-sm border border-slate-100">
+        <img
+          src={imageUrl}
+          alt=""
+          referrerPolicy="no-referrer"
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+            const fallback = e.currentTarget.nextElementSibling;
+            if (fallback) (fallback as HTMLElement).classList.remove("hidden");
+          }}
+        />
+        <span className={`${className} hidden`}>{emoji}</span>
+      </div>
+    );
+  }
+  return <span className={className}>{emoji}</span>;
+};
+
+// Composant de sélection d'icône unifié (Emoji ou Image)
+const IconPicker = ({
+  emoji,
+  imageUrl,
+  onChange,
+  accentColor = "emerald"
+}: {
+  emoji: string;
+  imageUrl?: string;
+  onChange: (emoji: string, imageUrl?: string) => void;
+  accentColor?: "emerald" | "amber";
+}) => {
+  const [activeTab, setActiveTab] = useState<'emoji' | 'image'>(
+    imageUrl && imageUrl.trim() ? 'image' : 'emoji'
+  );
+
+  useEffect(() => {
+    if (imageUrl && imageUrl.trim()) {
+      setActiveTab('image');
+    } else {
+      setActiveTab('emoji');
+    }
+  }, [imageUrl]);
+
+  const activeBg = accentColor === "emerald" ? "bg-emerald-600 text-white" : "bg-amber-500 text-white";
+  const ringColor = accentColor === "emerald" ? "focus:ring-emerald-500" : "focus:ring-amber-500";
+
+  return (
+    <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-3 space-y-3">
+      <div className="flex gap-3 items-center">
+        {/* Aperçu de l'icône */}
+        <div className="shrink-0">
+          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 text-center">Aperçu</label>
+          {renderItemIcon(emoji || "📦", imageUrl, "w-11 h-11 flex items-center justify-center text-xl bg-white border border-slate-200 rounded-xl shadow-sm")}
+        </div>
+
+        {/* Sélection de l'onglet */}
+        <div className="flex-1 space-y-1">
+          <label className="block text-[10px] font-bold text-slate-500 uppercase">Type d'Icône</label>
+          <div className="flex bg-slate-100 p-1 rounded-xl">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('emoji');
+                onChange(emoji || "📦", "");
+              }}
+              className={`flex-1 py-1 text-[11px] font-bold rounded-lg transition ${
+                activeTab === 'emoji' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              😀 Emoji
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('image');
+                onChange(emoji || "📦", imageUrl || "");
+              }}
+              className={`flex-1 py-1 text-[11px] font-bold rounded-lg transition ${
+                activeTab === 'image' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              🖼️ Image
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Zone de contenu de l'onglet actif */}
+      <div className="pt-1 border-t border-slate-100">
+        {activeTab === 'emoji' ? (
+          <div className="space-y-2">
+            <label className="block text-[9px] font-bold text-slate-400 uppercase">Saisir ou choisir un Emoji</label>
+            <div className="flex gap-2 items-center">
+              <input
+                type="text"
+                maxLength={2}
+                value={emoji}
+                onChange={(e) => onChange(e.target.value, "")}
+                placeholder="📦"
+                className={`w-12 text-center text-xl bg-white border border-slate-200 rounded-xl py-1.5 focus:ring-1 focus:outline-none font-bold ${ringColor}`}
+              />
+              <div className="flex flex-wrap gap-1">
+                {["🍎", "🥦", "🥩", "🧀", "🍞", "🥛", "🥤", "🧼", "🧴", "❄️", "🍳", "📦"].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => onChange(preset, "")}
+                    className="w-7 h-7 flex items-center justify-center bg-white hover:bg-slate-50 border border-slate-150 rounded-lg shadow-sm text-sm transition hover:scale-110 active:scale-95"
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <label className="block text-[9px] font-bold text-slate-400 uppercase">Adresse URL ou Importer un fichier</label>
+            <div className="flex gap-2 items-center">
+              <input
+                type="text"
+                placeholder="https://example.com/image.png"
+                value={imageUrl || ""}
+                onChange={(e) => onChange(emoji, e.target.value)}
+                className={`flex-1 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs focus:ring-1 focus:outline-none min-w-0 font-medium ${ringColor}`}
+              />
+              <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl px-2.5 py-1.5 text-[10px] font-bold text-slate-600 shrink-0 transition flex items-center gap-1 shadow-sm">
+                📁 Importer
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleUploadBase64(file, (base64) => {
+                        onChange(emoji, base64);
+                      });
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            {imageUrl && (
+              <button
+                type="button"
+                onClick={() => onChange(emoji, "")}
+                className="text-rose-500 text-[10px] font-bold hover:underline block ml-auto"
+              >
+                Réinitialiser l'image (Retour à l'emoji)
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ==========================================
 // TYPES ET INTERFACES (Pour structurer nos données)
 // ==========================================
 
@@ -54,11 +228,19 @@ export interface ExpiryDate {
   quantity: number;
 }
 
+export interface StockLocation {
+  id: string;
+  name: string;
+  emoji: string;
+  imageUrl?: string;
+}
+
 export interface Product {
   id: string;
   name: string;
   emoji: string;
   category: string; // ID de la catégorie
+  stockLocation?: string; // ID du lieu de stockage (ex: frigo, cave, etc.)
   quantity: number; // Quantité en stock
   minQuantity: number; // Seuil d'alerte minimum
   unit: string; // Unité (L, kg, g, pièces, paquets)
@@ -66,6 +248,7 @@ export interface Product {
   expiryDates: ExpiryDate[]; // Dates de péremption du produit
   lastBoughtTimes: number; // Compteur pour les statistiques
   totalExpenses: number; // Dépenses cumulées sur ce produit
+  imageUrl?: string;
 }
 
 export interface Category {
@@ -73,6 +256,7 @@ export interface Category {
   name: string;
   emoji: string;
   order: number;
+  imageUrl?: string;
 }
 
 export interface HistoryItem {
@@ -100,6 +284,7 @@ export interface ListData {
   name: string;
   products: Product[];
   categories: Category[];
+  stockLocations?: StockLocation[]; // Lieux de stockage de la liste
   history: HistoryItem[];
   logs: LogEntry[];
   lastModifiedAt: string;
@@ -108,6 +293,14 @@ export interface ListData {
 }
 
 const DEFAULT_USERS_LIST = ["Lucas", "Marie", "Sophie", "Thomas", "Emma"];
+
+const CLIENT_DEFAULT_STOCK_LOCATIONS: StockLocation[] = [
+  { id: "cuisine", name: "Cuisine (Général)", emoji: "🍳" },
+  { id: "frigo", name: "Réfrigérateur", emoji: "🥛" },
+  { id: "congelo", name: "Congélateur", emoji: "❄️" },
+  { id: "placard", name: "Placard / Épicerie", emoji: "🥫" },
+  { id: "cave", name: "Cave / Cellier", emoji: "🍾" }
+];
 const PRESET_USER_COLORS: Record<string, string> = {
   Lucas: "bg-blue-500 text-white border-blue-600",
   Marie: "bg-pink-500 text-white border-pink-600",
@@ -225,10 +418,20 @@ export default function App() {
   const [listName, setListName] = useState<string>("Ma Liste de Courses");
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [stockLocations, setStockLocations] = useState<StockLocation[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [lastModifiedAt, setLastModifiedAt] = useState<string>("");
   const [lastModifiedBy, setLastModifiedBy] = useState<string>("");
+
+  // États pour les listes et stocks multiples
+  interface ListSummary { id: string; name: string; lastModifiedAt: string; lastModifiedBy: string; itemsCount: number }
+  const [allLists, setAllLists] = useState<ListSummary[]>([]);
+  const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState<boolean>(false);
+  const [isStockLocationModalOpen, setIsStockLocationModalOpen] = useState<boolean>(false);
+  const [newWorkspaceId, setNewWorkspaceId] = useState<string>("");
+  const [newWorkspaceName, setNewWorkspaceName] = useState<string>("");
+  const [selectedStockFilter, setSelectedStockFilter] = useState<string>("all");
 
   // UI / Navigation & Filtres
   const [activeMainTab, setActiveMainTab] = useState<"overview" | "inventory" | "stats" | "expiry" | "reglage">("overview");
@@ -243,7 +446,7 @@ export default function App() {
   });
 
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
-  const [editCategoryForm, setEditCategoryForm] = useState({ name: "", emoji: "" });
+  const [editCategoryForm, setEditCategoryForm] = useState({ name: "", emoji: "", imageUrl: "" });
 
   const [selectedCategoryTab, setSelectedCategoryTab] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -253,8 +456,24 @@ export default function App() {
   // États de l'onglet Réglages
   const [newCatName, setNewCatName] = useState("");
   const [newCatEmoji, setNewCatEmoji] = useState("📦");
+  const [newCatImageUrl, setNewCatImageUrl] = useState("");
+  const [newLocName, setNewLocName] = useState("");
+  const [newLocEmoji, setNewLocEmoji] = useState("🧴");
+  const [newLocImageUrl, setNewLocImageUrl] = useState("");
+  const [editingLocId, setEditingLocId] = useState<string | null>(null);
+  const [editLocForm, setEditLocForm] = useState({ name: "", emoji: "", imageUrl: "" });
   const [searchQueryReglage, setSearchQueryReglage] = useState("");
   const [selectedReglageProductIds, setSelectedReglageProductIds] = useState<string[]>([]);
+  
+  // États de l'ajout en lot (Bulk Add)
+  const [isBulkAddModalOpen, setIsBulkAddModalOpen] = useState(false);
+  const [bulkAddStep, setBulkAddStep] = useState<"input" | "edit">("input");
+  const [bulkAddDrafts, setBulkAddDrafts] = useState<Product[]>([]);
+  const [bulkAddText, setBulkAddText] = useState("");
+  const [bulkAddCategory, setBulkAddCategory] = useState("autre");
+  const [bulkAddStockLocation, setBulkAddStockLocation] = useState("cuisine");
+  const [bulkAddQuantity, setBulkAddQuantity] = useState(1);
+  const [bulkAddUnit, setBulkAddUnit] = useState("pièces");
   
   // États de la sélection des utilisateurs
   const [userModalTab, setUserModalTab] = useState<"select" | "parameters">("select");
@@ -293,6 +512,8 @@ export default function App() {
   
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState<boolean>(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState<boolean>(false);
+  const [isPwaModalOpen, setIsPwaModalOpen] = useState<boolean>(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   
   // Scanner d'appareil photo / Téléchargement IA
   const [isScannerOpen, setIsScannerOpen] = useState<boolean>(false);
@@ -311,7 +532,8 @@ export default function App() {
     minQuantity: 1,
     unit: "pièces",
     price: 0,
-    expiryDates: [] as ExpiryDate[]
+    expiryDates: [] as ExpiryDate[],
+    imageUrl: ""
   });
   
   // Formulaire d'ajout de date de péremption temporaire (dans l'édition)
@@ -355,13 +577,44 @@ export default function App() {
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
+  // Écouter l'événement beforeinstallprompt pour capturer l'installation native PWA (Android / Chrome)
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      console.log("[PWA] beforeinstallprompt capturé avec succès.");
+    };
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    };
+  }, []);
+
   // ==========================================
   // SYNCHRONISATION EN TEMPS RÉEL (Polling)
   // ==========================================
   
   // Charger les données de la liste
   const fetchList = async (showLoader = false) => {
-    if (isEditingRef.current) return; // Ne pas interrompre l'utilisateur pendant qu'il édite
+    if (
+      isEditingRef.current ||
+      isProductModalOpen ||
+      isBulkAddModalOpen ||
+      isCategoryModalOpen ||
+      isUserModalOpen ||
+      isStockLocationModalOpen ||
+      isWorkspaceModalOpen ||
+      showAiPreviewModal ||
+      editingCategoryId !== null ||
+      editingLocId !== null ||
+      (document.activeElement && (
+        document.activeElement.tagName === "INPUT" ||
+        document.activeElement.tagName === "TEXTAREA" ||
+        document.activeElement.tagName === "SELECT"
+      ))
+    ) {
+      return; // Ne pas interrompre l'utilisateur pendant qu'il édite
+    }
     if (showLoader) setIsSyncing(true);
     
     try {
@@ -374,6 +627,7 @@ export default function App() {
       // Trier les catégories selon leur ordre
       const sortedCats = (data.categories || []).sort((a, b) => a.order - b.order);
       setCategories(sortedCats);
+      setStockLocations(data.stockLocations || CLIENT_DEFAULT_STOCK_LOCATIONS);
       setHistory(data.history || []);
       setLogs(data.logs || []);
       setLastModifiedAt(data.lastModifiedAt || "");
@@ -397,6 +651,7 @@ export default function App() {
           setProducts(data.products || []);
           const sortedCats = (data.categories || []).sort((a, b) => a.order - b.order);
           setCategories(sortedCats);
+          setStockLocations(data.stockLocations || CLIENT_DEFAULT_STOCK_LOCATIONS);
           setHistory(data.history || []);
           setLogs(data.logs || []);
           setLastModifiedAt(data.lastModifiedAt || "");
@@ -416,6 +671,7 @@ export default function App() {
           name: listId === "default" ? "Ma Liste de Courses" : `Liste : ${listId}`,
           products: CLIENT_DEFAULT_PRODUCTS,
           categories: CLIENT_DEFAULT_CATEGORIES,
+          stockLocations: CLIENT_DEFAULT_STOCK_LOCATIONS,
           history: [],
           logs: [{
             user: "Système",
@@ -430,6 +686,7 @@ export default function App() {
         setListName(fallbackData.name);
         setProducts(fallbackData.products);
         setCategories(fallbackData.categories);
+        setStockLocations(fallbackData.stockLocations || CLIENT_DEFAULT_STOCK_LOCATIONS);
         setHistory(fallbackData.history);
         setLogs(fallbackData.logs);
         setLastModifiedAt(fallbackData.lastModifiedAt);
@@ -453,6 +710,23 @@ export default function App() {
     return () => clearInterval(interval);
   }, [listId]);
 
+  // Charger la liste globale des listes de courses et de stocks
+  const fetchAllLists = async () => {
+    try {
+      const res = await fetch("/api/lists");
+      if (res.ok) {
+        const data = await res.json();
+        setAllLists(data);
+      }
+    } catch (err) {
+      console.warn("Échec de chargement des listes de stocks :", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllLists();
+  }, [listId]);
+
   // Persister l'utilisateur courant localement
   useEffect(() => {
     localStorage.setItem("pantry_user", currentUser);
@@ -471,7 +745,8 @@ export default function App() {
     updatedCategories: Category[],
     updatedHistory: HistoryItem[],
     actionDetail: string,
-    updatedUsersList?: string[]
+    updatedUsersList?: string[],
+    updatedStockLocations?: StockLocation[]
   ) => {
     setIsSyncing(true);
     
@@ -484,12 +759,14 @@ export default function App() {
     
     const updatedLogs = [newLogEntry, ...logs].slice(0, 50); // Garder les 50 derniers logs
     const finalUsers = updatedUsersList || users;
+    const finalStockLocations = updatedStockLocations || stockLocations;
 
     const payload: ListData = {
       id: listId,
       name: listName,
       products: updatedProducts,
       categories: updatedCategories,
+      stockLocations: finalStockLocations,
       history: updatedHistory,
       logs: updatedLogs,
       lastModifiedAt: new Date().toISOString(),
@@ -501,6 +778,7 @@ export default function App() {
     localStorage.setItem(`pantry_list_${listId}`, JSON.stringify(payload));
     setProducts(updatedProducts);
     setCategories(updatedCategories.sort((a, b) => a.order - b.order));
+    setStockLocations(finalStockLocations);
     setHistory(updatedHistory);
     setLogs(updatedLogs);
     setLastModifiedAt(payload.lastModifiedAt);
@@ -520,6 +798,7 @@ export default function App() {
       // Mettre à jour avec les dernières données du serveur (en cas de modifications concurrentes)
       setProducts(data.products);
       setCategories(data.categories.sort((a, b) => a.order - b.order));
+      setStockLocations(data.stockLocations || finalStockLocations);
       setHistory(data.history);
       setLogs(data.logs);
       setLastModifiedAt(data.lastModifiedAt);
@@ -642,11 +921,13 @@ export default function App() {
       name: "",
       emoji: "📦",
       category: categories[0]?.id || "autre",
+      stockLocation: stockLocations[0]?.id || "cuisine",
       quantity: 1,
       minQuantity: 1,
       unit: "pièces",
       price: 0.99,
-      expiryDates: []
+      expiryDates: [],
+      imageUrl: ""
     });
     setTempExpiry({ date: "", quantity: 1 });
     setIsProductModalOpen(true);
@@ -656,14 +937,16 @@ export default function App() {
     isEditingRef.current = true;
     setEditingProduct(product);
     setProdForm({
-      name: product.name,
+      name: product.name || "",
       emoji: product.emoji || "📦",
-      category: product.category,
-      quantity: product.quantity,
-      minQuantity: product.minQuantity,
+      category: product.category || "autre",
+      stockLocation: product.stockLocation || stockLocations[0]?.id || "cuisine",
+      quantity: product.quantity !== undefined && product.quantity !== null ? product.quantity : 1,
+      minQuantity: product.minQuantity !== undefined && product.minQuantity !== null ? product.minQuantity : 1,
       unit: product.unit || "pièces",
       price: product.price || 0,
-      expiryDates: product.expiryDates || []
+      expiryDates: product.expiryDates || [],
+      imageUrl: product.imageUrl || ""
     });
     setTempExpiry({ date: "", quantity: 1 });
     setIsProductModalOpen(true);
@@ -685,11 +968,13 @@ export default function App() {
             name: prodForm.name.trim(),
             emoji: prodForm.emoji,
             category: prodForm.category,
+            stockLocation: prodForm.stockLocation,
             quantity: Number(prodForm.quantity),
             minQuantity: Number(prodForm.minQuantity),
             unit: prodForm.unit,
             price: Number(prodForm.price),
-            expiryDates: prodForm.expiryDates
+            expiryDates: prodForm.expiryDates,
+            imageUrl: prodForm.imageUrl
           };
         }
         return p;
@@ -702,13 +987,15 @@ export default function App() {
         name: prodForm.name.trim(),
         emoji: prodForm.emoji,
         category: prodForm.category,
+        stockLocation: prodForm.stockLocation,
         quantity: Number(prodForm.quantity),
         minQuantity: Number(prodForm.minQuantity),
         unit: prodForm.unit,
         price: Number(prodForm.price),
         expiryDates: prodForm.expiryDates,
         lastBoughtTimes: 0,
-        totalExpenses: 0
+        totalExpenses: 0,
+        imageUrl: prodForm.imageUrl
       };
       updatedProducts = [...products, newProduct];
       actionDetail = `Ajout d'un nouveau produit au stock : ${prodForm.emoji} ${prodForm.name}`;
@@ -800,20 +1087,202 @@ export default function App() {
     }
   };
 
-  const handleEditCategory = async (catId: string, name: string, emoji: string) => {
+  const handleEditCategory = async (catId: string, name: string, emoji: string, imageUrl?: string) => {
     if (!name.trim()) {
       alert("Le nom de la catégorie ne peut pas être vide.");
       return;
     }
     const updatedCats = categories.map((c) => {
       if (c.id === catId) {
-        return { ...c, name: name.trim(), emoji: emoji || "📦" };
+        return { ...c, name: name.trim(), emoji: emoji || "📦", imageUrl: imageUrl || "" };
       }
       return c;
     });
     const detailText = `Modification de la catégorie : ${emoji || "📦"} ${name}`;
     await saveToServer(products, updatedCats, history, detailText);
     setEditingCategoryId(null);
+  };
+
+  const handleEditStockLocation = async (locId: string, name: string, emoji: string, imageUrl?: string) => {
+    if (!name.trim()) {
+      alert("Le nom du lieu de stockage ne peut pas être vide.");
+      return;
+    }
+    const updatedLocs = stockLocations.map((s) => {
+      if (s.id === locId) {
+        return { ...s, name: name.trim(), emoji: emoji || "🧴", imageUrl: imageUrl || "" };
+      }
+      return s;
+    });
+    const detailText = `Modification du lieu de stockage : ${emoji || "🧴"} ${name}`;
+    await saveToServer(products, categories, history, detailText, users, updatedLocs);
+    setEditingLocId(null);
+  };
+
+  const getProductEmojiByName = (name: string, categoryEmoji: string): string => {
+    const lower = name.toLowerCase();
+    const dict: Record<string, string> = {
+      lait: "🥛",
+      beurre: "🧈",
+      fromage: "🧀",
+      yaourt: "🥛",
+      oeuf: "🥚",
+      creme: "🥛",
+      pain: "🍞",
+      baguette: "🥖",
+      croissant: "🥐",
+      brioche: "🍞",
+      farine: "🌾",
+      sucre: "🍬",
+      sel: "🧂",
+      huile: "🫗",
+      vinaigre: "🍾",
+      riz: "🍚",
+      pates: "🍝",
+      pate: "🍝",
+      semoule: "🌾",
+      ble: "🌾",
+      quinoa: "🌾",
+      lentilles: "🫘",
+      haricots: "🫘",
+      pois: "🫛",
+      pomme: "🍎",
+      poire: "🍐",
+      banane: "🍌",
+      orange: "🍊",
+      citron: "🍋",
+      fraise: "🍓",
+      framboise: "🍓",
+      cerise: "🍒",
+      peche: "🍑",
+      abricot: "🍑",
+      raisin: "🍇",
+      melon: "🍈",
+      pasteque: "🍉",
+      kiwi: "🥝",
+      avocat: "🥑",
+      tomate: "🍅",
+      salade: "🥬",
+      carotte: "🥕",
+      oignon: "🧅",
+      ail: "🧄",
+      potato: "🥔",
+      patate: "🥔",
+      poivron: "🫑",
+      courgette: "🥒",
+      concombre: "🥒",
+      aubergine: "🍆",
+      champignon: "🍄",
+      brocoli: "🥦",
+      epinard: "🥬",
+      haricot: "🫘",
+      boeuf: "🥩",
+      poulet: "🍗",
+      porc: "🥓",
+      jambon: "🥓",
+      saucisse: "🌭",
+      steak: "🥩",
+      poisson: "🐟",
+      saumon: "🐟",
+      thon: "🐟",
+      crevette: "🍤",
+      eau: "💧",
+      jus: "🧃",
+      soda: "🥤",
+      cola: "🥤",
+      biere: "🍺",
+      vin: "🍷",
+      champagne: "🍾",
+      cafe: "☕",
+      the: "🍵",
+      chocolat: "🍫",
+      biscuits: "🍪",
+      gateau: "🍰",
+      bonbon: "🍬",
+      chips: "🍿",
+      savon: "🧼",
+      shampoing: "🧴",
+      dentifrice: "🪥",
+      papier: "🧻",
+      essuie: "🧻",
+      lessive: "🧼",
+      liquide: "🧼"
+    };
+
+    for (const [key, value] of Object.entries(dict)) {
+      if (lower.includes(key)) return value;
+    }
+    return categoryEmoji;
+  };
+
+  const handleBulkAdd = async () => {
+    if (bulkAddStep === "input") {
+      if (!bulkAddText.trim()) {
+        alert("Veuillez entrer au moins un nom de produit.");
+        return;
+      }
+
+      const names = bulkAddText
+        .split(/[\n,]+/)
+        .map((name) => name.trim())
+        .filter((name) => name.length > 0);
+
+      if (names.length === 0) {
+        alert("Aucun produit valide trouvé.");
+        return;
+      }
+
+      const selectedCatObj = categories.find((c) => c.id === bulkAddCategory);
+      const catEmoji = selectedCatObj?.emoji || "📦";
+
+      const drafts: Product[] = names.map((name, index) => {
+        const emoji = getProductEmojiByName(name, catEmoji);
+        return {
+          id: "draft-" + (Date.now() + index) + "-" + Math.floor(Math.random() * 1000),
+          name: name,
+          emoji: emoji,
+          category: bulkAddCategory,
+          stockLocation: bulkAddStockLocation,
+          quantity: Number(bulkAddQuantity) || 1,
+          minQuantity: 1,
+          unit: bulkAddUnit || "pièces",
+          price: 0,
+          expiryDates: [],
+          lastBoughtTimes: 0,
+          totalExpenses: 0,
+          imageUrl: ""
+        };
+      });
+
+      setBulkAddDrafts(drafts);
+      setBulkAddStep("edit");
+    } else {
+      // Étape "edit" -> Enregistrer définitivement
+      if (bulkAddDrafts.length === 0) {
+        alert("Aucun produit à ajouter.");
+        return;
+      }
+
+      const newProductsList = [...products];
+      const addedNames: string[] = [];
+
+      bulkAddDrafts.forEach((draft) => {
+        const realProduct: Product = {
+          ...draft,
+          id: "prod-" + Date.now() + "-" + Math.floor(Math.random() * 10000)
+        };
+        newProductsList.push(realProduct);
+        addedNames.push(`${realProduct.emoji} ${realProduct.name}`);
+      });
+
+      const actionDetail = `Ajout en lot de ${bulkAddDrafts.length} produits (${addedNames.slice(0, 5).join(", ")}${bulkAddDrafts.length > 5 ? "..." : ""})`;
+      await saveToServer(newProductsList, categories, history, actionDetail);
+
+      setBulkAddText("");
+      setBulkAddDrafts([]);
+      setBulkAddStep("input");
+      setIsBulkAddModalOpen(false);
+    }
   };
 
   // Suppression d'une date de péremption pour un produit
@@ -952,7 +1421,15 @@ export default function App() {
 
       const data = await res.json();
       if (data && data.products) {
-        setAiPreviewProducts(data.products);
+        const sanitizedProducts = data.products.map((p: any) => ({
+          name: p.name || "",
+          emoji: p.emoji || "📦",
+          category: p.category || "autre",
+          quantity: p.quantity !== undefined && p.quantity !== null ? Number(p.quantity) : 1,
+          price: p.price !== undefined && p.price !== null ? Number(p.price) : 0,
+          unit: p.unit || "pièces"
+        }));
+        setAiPreviewProducts(sanitizedProducts);
         setShowAiPreviewModal(true);
         setIsScannerOpen(false); // Fermer le scanner d'importation
       } else {
@@ -1104,6 +1581,7 @@ export default function App() {
         productId: p.id,
         name: p.name,
         emoji: p.emoji,
+        imageUrl: p.imageUrl,
         date: exp.date,
         quantity: exp.quantity,
         unit: p.unit,
@@ -1232,38 +1710,53 @@ export default function App() {
 
   const COLORS = ["#059669", "#0284c7", "#f59e0b", "#ec4899", "#8b5cf6", "#3b82f6", "#ef4444", "#10b981"];
 
+  // Normaliser pour la recherche insensible aux accents et à la casse
+  const normalizeStr = (str: string) => {
+    return (str || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  };
+
   // Filtrer les produits pour l'affichage de la grille de stock
   const filteredProducts = products.filter((p) => {
     const matchesCategory = selectedCategoryTab === "all" || p.category === selectedCategoryTab;
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    const matchesStock = selectedStockFilter === "all" || p.stockLocation === selectedStockFilter;
+    const matchesSearch = normalizeStr(p.name).includes(normalizeStr(searchQuery));
+    return matchesCategory && matchesStock && matchesSearch;
   });
 
   // Trier les produits filtrés
   const getSortedProducts = (prods: Product[]) => {
     const list = [...prods];
     if (productSortBy === "name-asc") {
-      return list.sort((a, b) => a.name.localeCompare(b.name, "fr"));
+      return list.sort((a, b) => (a.name || "").localeCompare(b.name || "", "fr"));
     }
     if (productSortBy === "name-desc") {
-      return list.sort((a, b) => b.name.localeCompare(a.name, "fr"));
+      return list.sort((a, b) => (b.name || "").localeCompare(a.name || "", "fr"));
     }
     if (productSortBy === "stock-asc") {
-      return list.sort((a, b) => a.quantity - b.quantity);
+      return list.sort((a, b) => Number(a.quantity || 0) - Number(b.quantity || 0));
     }
     if (productSortBy === "stock-desc") {
-      return list.sort((a, b) => b.quantity - a.quantity);
+      return list.sort((a, b) => Number(b.quantity || 0) - Number(a.quantity || 0));
     }
     if (productSortBy === "price-asc") {
-      return list.sort((a, b) => (a.price || 0) - (b.price || 0));
+      return list.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
     }
     if (productSortBy === "price-desc") {
-      return list.sort((a, b) => (b.price || 0) - (a.price || 0));
+      return list.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
     }
     if (productSortBy === "expiry-asc") {
       return list.sort((a, b) => {
-        const nextA = (a.expiryDates || []).length > 0 ? new Date(a.expiryDates[0].date).getTime() : Infinity;
-        const nextB = (b.expiryDates || []).length > 0 ? new Date(b.expiryDates[0].date).getTime() : Infinity;
+        const getMinExpiry = (p: Product) => {
+          if (!p.expiryDates || p.expiryDates.length === 0) return Infinity;
+          const dates = p.expiryDates.map(d => new Date(d.date).getTime()).filter(t => !isNaN(t));
+          if (dates.length === 0) return Infinity;
+          return Math.min(...dates);
+        };
+        const nextA = getMinExpiry(a);
+        const nextB = getMinExpiry(b);
         return nextA - nextB;
       });
     }
@@ -1288,9 +1781,20 @@ export default function App() {
               <h1 className="text-xl font-bold tracking-tight text-emerald-950">PantryPal</h1>
               <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">Pro Collaborative</span>
             </div>
-            <p className="text-xs text-slate-500">
-              Liste active : <span className="font-mono text-emerald-700 bg-slate-100 px-1 py-0.5 rounded">#{listId}</span>
-            </p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-[10px] text-slate-500 font-medium">Stock & Liste :</span>
+              <button 
+                onClick={() => {
+                  fetchAllLists();
+                  setIsWorkspaceModalOpen(true);
+                }}
+                className="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200/80 transition flex items-center gap-1.5 shrink-0"
+              >
+                <span>📂 {listName}</span>
+                <span className="font-mono text-[9px] text-emerald-600 bg-emerald-100/50 px-1 rounded">#{listId}</span>
+                <span className="text-[9px] text-emerald-600 font-normal">▼</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1342,6 +1846,15 @@ export default function App() {
           >
             <FileText className="w-3.5 h-3.5" />
             <span>📝 Lire Liste IA</span>
+          </button>
+
+          {/* Installer l'application sur mobile */}
+          <button
+            onClick={() => setIsPwaModalOpen(true)}
+            className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-3 py-1.5 rounded-xl text-xs font-semibold transition shadow-md hover:scale-[1.02] active:scale-95 duration-150"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+            <span>📲 Installer sur Mobile</span>
           </button>
         </div>
       </header>
@@ -1685,7 +2198,7 @@ export default function App() {
                             className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition"
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-lg shrink-0">{p.emoji}</span>
+                              {renderItemIcon(p.emoji, p.imageUrl, "w-6 h-6 flex items-center justify-center text-xs shrink-0 bg-white border border-slate-100 rounded-lg shadow-sm")}
                               <div className="min-w-0">
                                 <span className="text-xs font-bold text-slate-800 block truncate">{p.name}</span>
                                 <span className={`text-[10px] font-medium leading-none ${isRupture ? 'text-rose-600 font-bold' : 'text-amber-600'}`}>
@@ -1747,10 +2260,18 @@ export default function App() {
                     <span>🔔</span> Activité Récente
                   </h3>
                   <button
-                    onClick={() => setActiveMainTab("stats")}
+                    onClick={() => {
+                      setActiveMainTab("stats");
+                      setTimeout(() => {
+                        const el = document.getElementById("modification-history");
+                        if (el) {
+                          el.scrollIntoView({ behavior: "smooth" });
+                        }
+                      }, 150);
+                    }}
                     className="text-[10px] font-bold text-emerald-600 hover:underline"
                   >
-                    Voir l'historique
+                    Afficher l'historique
                   </button>
                 </div>
 
@@ -1836,18 +2357,33 @@ export default function App() {
                   </select>
                 </div>
 
-                <button
-                  onClick={handleOpenAddProduct}
-                  className="bg-emerald-600 text-white hover:bg-emerald-700 px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Ajouter</span>
-                </button>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => {
+                      setBulkAddCategory(selectedCategoryTab !== "all" ? selectedCategoryTab : (categories[0]?.id || "autre"));
+                      setBulkAddStockLocation(stockLocations[0]?.id || "cuisine");
+                      setIsBulkAddModalOpen(true);
+                    }}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition border border-slate-200"
+                    title="Ajouter plusieurs produits d'un coup"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Ajouter en lot</span>
+                  </button>
+                  <button
+                    onClick={handleOpenAddProduct}
+                    className="bg-emerald-600 text-white hover:bg-emerald-700 px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition shadow-sm"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Ajouter</span>
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Catégories de filtrage rapide */}
             <div className="px-4 py-2 bg-slate-50/40 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider select-none pr-1">Catégorie :</span>
               <button
                 onClick={() => setSelectedCategoryTab("all")}
                 className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
@@ -1856,7 +2392,7 @@ export default function App() {
                     : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
                 }`}
               >
-                Tous les stocks
+                Tout
               </button>
               {categories.map((cat) => {
                 const count = products.filter((p) => p.category === cat.id).length;
@@ -1880,10 +2416,52 @@ export default function App() {
               })}
               <button
                 onClick={() => setIsCategoryModalOpen(true)}
-                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 flex items-center gap-1 whitespace-nowrap animate-pulse"
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 flex items-center gap-1 whitespace-nowrap"
               >
                 <Settings className="w-3 h-3 text-slate-500" />
                 <span>Gérer les catégories</span>
+              </button>
+            </div>
+
+            {/* Lieux de stockage de filtrage rapide (Plusieurs stocks différents) */}
+            <div className="px-4 py-2 bg-emerald-50/30 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto">
+              <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider select-none pr-1">Stocks :</span>
+              <button
+                onClick={() => setSelectedStockFilter("all")}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+                  selectedStockFilter === "all"
+                    ? "bg-emerald-700 text-white shadow-sm"
+                    : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                Tous les stocks
+              </button>
+              {stockLocations.map((loc) => {
+                const count = products.filter((p) => p.stockLocation === loc.id).length;
+                return (
+                  <button
+                    key={loc.id}
+                    onClick={() => setSelectedStockFilter(loc.id)}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1 transition ${
+                      selectedStockFilter === loc.id
+                        ? "bg-emerald-700 text-white shadow-sm"
+                        : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>{loc.emoji}</span>
+                    <span>{loc.name}</span>
+                    <span className={`text-[9px] px-1 rounded-full ${selectedStockFilter === loc.id ? 'bg-emerald-900 text-emerald-100' : 'bg-slate-100 text-slate-500'}`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+              <button
+                onClick={() => setIsStockLocationModalOpen(true)}
+                className="px-2 py-1 rounded-lg text-xs font-semibold bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 flex items-center gap-1 whitespace-nowrap"
+              >
+                <Settings className="w-3 h-3 text-slate-500" />
+                <span>Gérer les stocks</span>
               </button>
             </div>
 
@@ -1938,17 +2516,25 @@ export default function App() {
                       >
                         {/* En-tête de la carte */}
                         <div className="flex items-start gap-3">
-                          <div className="text-3xl bg-slate-100 rounded-xl p-1.5 flex items-center justify-center shrink-0 shadow-inner">
-                            {p.emoji || "📦"}
+                          <div className="shrink-0">
+                            {renderItemIcon(p.emoji, p.imageUrl, "w-11 h-11 flex items-center justify-center text-2xl bg-slate-50 border border-slate-150 rounded-xl shadow-inner")}
                           </div>
                           <div className="flex-1 min-w-0">
                             <h3 className="font-bold text-slate-800 text-sm truncate" title={p.name}>
                               {p.name}
                             </h3>
-                            <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
-                              <span>{cat?.emoji}</span>
-                              <span>{cat?.name || "Sans catégorie"}</span>
-                            </p>
+                            <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                              <span className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 flex items-center gap-0.5">
+                                <span>{cat?.emoji}</span>
+                                <span className="truncate max-w-[80px]">{cat?.name || "Sans catégorie"}</span>
+                              </span>
+                              {p.stockLocation && (
+                                <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100/50 flex items-center gap-0.5 font-medium">
+                                  <span>{stockLocations.find(s => s.id === p.stockLocation)?.emoji || "🍳"}</span>
+                                  <span className="truncate max-w-[85px]">{stockLocations.find(s => s.id === p.stockLocation)?.name || p.stockLocation}</span>
+                                </span>
+                              )}
+                            </div>
                           </div>
                           
                           {/* Actions rapides sur le produit */}
@@ -2144,7 +2730,7 @@ export default function App() {
                               >
                                 <Check className="w-3.5 h-3.5 text-emerald-600 opacity-0 group-hover:opacity-100 transition" />
                               </button>
-                              <span className="text-xl shrink-0">{p.emoji}</span>
+                              {renderItemIcon(p.emoji, p.imageUrl, "w-6 h-6 flex items-center justify-center text-xs shrink-0 bg-white border border-slate-100 rounded-lg shadow-sm")}
                               <div className="min-w-0">
                                 <p className="text-xs font-semibold text-slate-800 truncate">{p.name}</p>
                                 <p className="text-[10px] text-slate-500">
@@ -2582,6 +3168,64 @@ export default function App() {
             )}
           </div>
 
+          {/* ==========================================
+              HISTORIQUE DES MODIFICATIONS ET ACTIVITÉ (Logs complets)
+              ========================================== */}
+          <div 
+            id="modification-history" 
+            className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4 scroll-mt-6"
+          >
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>📜</span> Historique des Modifications
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  Journal complet des actions, des ajouts et des mises à jour des stocks
+                </p>
+              </div>
+              <span className="text-[10px] bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-bold">
+                {logs.length} événements enregistrés
+              </span>
+            </div>
+
+            <div className="max-h-[450px] overflow-y-auto space-y-3 pr-2 scrollbar-thin">
+              {logs.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 space-y-2">
+                  <span className="text-3xl">📭</span>
+                  <p className="text-xs font-bold">Aucune activité enregistrée pour le moment.</p>
+                </div>
+              ) : (
+                [...logs].reverse().map((log, idx) => {
+                  const initials = log.user.substring(0, 2).toUpperCase();
+                  const userColorClass = getUserColor(log.user);
+                  
+                  return (
+                    <div 
+                      key={idx} 
+                      className="flex gap-3.5 items-start p-3 rounded-2xl bg-slate-50/50 hover:bg-slate-50 transition border border-slate-100/50 hover:border-slate-200/80"
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border shadow-sm ${userColorClass}`}>
+                        {initials}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <strong className="text-slate-900 text-xs font-bold">{log.user}</strong>
+                          <span className="text-[9px] text-slate-400 font-semibold bg-white border border-slate-150 px-2 py-0.5 rounded-md shadow-2xs">
+                            {new Date(log.date).toLocaleDateString("fr-FR")} à {new Date(log.date).toLocaleTimeString("fr-FR", { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <p className="text-slate-700 leading-relaxed mt-1 text-[11px] font-medium">
+                          {log.details}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
         </main>
       )}
 
@@ -2837,179 +3481,365 @@ export default function App() {
         <main className="max-w-7xl mx-auto w-full p-4 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
           {/* ========================================================
-              COLONNE GAUCHE : Gestion des Catégories (col-span-5)
+              COLONNE GAUCHE : Gestion des Catégories & Lieux de Stockage (col-span-5)
              ======================================================== */}
-          <section className="lg:col-span-5 bg-white rounded-3xl border border-slate-200 p-5 shadow-sm flex flex-col min-h-[500px]">
-            <div className="border-b border-slate-100 pb-3 mb-4 flex justify-between items-center">
-              <div>
-                <h2 className="font-extrabold text-slate-800 text-sm flex items-center gap-2">
-                  <span>📂</span> Gestion des Catégories
-                </h2>
-                <p className="text-[10px] text-slate-400">Ajoutez, supprimez et triez vos catégories de produits.</p>
-              </div>
-              <span className="text-[10px] bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full font-bold">
-                {categories.length} catégories
-              </span>
-            </div>
-
-            {/* Formulaire d'ajout rapide de catégorie */}
-            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3 mb-4 space-y-2.5">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Ajout Rapide :</span>
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Emoji"
-                    value={newCatEmoji}
-                    onChange={(e) => setNewCatEmoji(e.target.value)}
-                    className="bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs text-center font-bold focus:ring-1 focus:ring-amber-500 focus:outline-none w-14 shrink-0"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Nom de catégorie (ex: Surgelés)"
-                    value={newCatName}
-                    onChange={(e) => setNewCatName(e.target.value)}
-                    className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none flex-1 min-w-0"
-                  />
+          <div className="lg:col-span-5 flex flex-col gap-6">
+            
+            {/* Gestion des Catégories */}
+            <section className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm flex flex-col">
+              <div className="border-b border-slate-100 pb-3 mb-4 flex justify-between items-center">
+                <div>
+                  <h2 className="font-extrabold text-slate-800 text-sm flex items-center gap-2">
+                    <span>📂</span> Gestion des Catégories
+                  </h2>
+                  <p className="text-[10px] text-slate-400">Ajoutez, supprimez et triez vos catégories de produits.</p>
                 </div>
-                <button
-                  onClick={async () => {
-                    if (!newCatName.trim()) {
-                      alert("Veuillez saisir un nom pour la catégorie.");
-                      return;
-                    }
-                    const cleanId = newCatName.trim().toLowerCase().replace(/\s+/g, "-");
-                    if (categories.some((c) => c.id === cleanId)) {
-                      alert("Une catégorie portant ce nom existe déjà.");
-                      return;
-                    }
-                    const newCat = {
-                      id: cleanId,
-                      name: newCatName.trim(),
-                      emoji: newCatEmoji || "📦",
-                      order: categories.length
-                    };
-                    const updatedCats = [...categories, newCat];
-                    await saveToServer(products, updatedCats, history, `Ajout de la catégorie ${newCat.emoji} ${newCat.name}`);
-                    setNewCatName("");
-                    setNewCatEmoji("📦");
-                  }}
-                  className="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold py-2 px-4 rounded-xl transition shadow-sm w-full text-center"
-                >
-                  Ajouter la catégorie
-                </button>
+                <span className="text-[10px] bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full font-bold">
+                  {categories.length} catégories
+                </span>
               </div>
-            </div>
 
-            {/* Liste des catégories triables & supprimables */}
-            <div className="flex-1 space-y-1.5 overflow-y-auto max-h-[420px] pr-1">
-              {categories.map((cat, idx) => {
-                const linkedCount = products.filter((p) => p.category === cat.id).length;
-                const isEditing = editingCategoryId === cat.id;
+              {/* Formulaire d'ajout rapide de catégorie */}
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3 mb-4 space-y-2.5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Ajout Rapide :</span>
+                <div className="space-y-2">
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Nom de catégorie (ex: Surgelés)"
+                      value={newCatName}
+                      onChange={(e) => setNewCatName(e.target.value)}
+                      className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none w-full font-medium"
+                    />
+                  </div>
+                  {/* Icône de catégorie (Unifiée) */}
+                  <IconPicker
+                    emoji={newCatEmoji}
+                    imageUrl={newCatImageUrl}
+                    onChange={(emoji, imageUrl) => {
+                      setNewCatEmoji(emoji);
+                      setNewCatImageUrl(imageUrl || "");
+                    }}
+                    accentColor="amber"
+                  />
+                  <button
+                    onClick={async () => {
+                      if (!newCatName.trim()) {
+                        alert("Veuillez saisir un nom pour la catégorie.");
+                        return;
+                      }
+                      const cleanId = newCatName.trim().toLowerCase().replace(/\s+/g, "-");
+                      if (categories.some((c) => c.id === cleanId)) {
+                        alert("Une catégorie portant ce nom existe déjà.");
+                        return;
+                      }
+                      const newCat = {
+                        id: cleanId,
+                        name: newCatName.trim(),
+                        emoji: newCatEmoji || "📦",
+                        order: categories.length,
+                        imageUrl: newCatImageUrl
+                      };
+                      const updatedCats = [...categories, newCat];
+                      await saveToServer(products, updatedCats, history, `Ajout de la catégorie ${newCat.emoji} ${newCat.name}`);
+                      setNewCatName("");
+                      setNewCatEmoji("📦");
+                      setNewCatImageUrl("");
+                    }}
+                    className="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold py-2 px-4 rounded-xl transition shadow-sm w-full text-center font-bold"
+                  >
+                    Ajouter la catégorie
+                  </button>
+                </div>
+              </div>
 
-                if (isEditing) {
+              {/* Liste des catégories triables & supprimables */}
+              <div className="space-y-1.5 overflow-y-auto max-h-[250px] pr-1">
+                {categories.map((cat, idx) => {
+                  const linkedCount = products.filter((p) => p.category === cat.id).length;
+                  const isEditing = editingCategoryId === cat.id;
+
+                  if (isEditing) {
+                    return (
+                      <div
+                        key={cat.id}
+                        className="flex flex-col gap-2.5 p-3 bg-amber-50/50 border border-amber-300 rounded-2xl animate-fade-in w-full"
+                      >
+                        <div>
+                          <input
+                            type="text"
+                            value={editCategoryForm.name}
+                            onChange={(e) => setEditCategoryForm({ ...editCategoryForm, name: e.target.value })}
+                            className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none w-full font-semibold text-slate-800"
+                            placeholder="Nom de catégorie"
+                          />
+                        </div>
+                        {/* Sélecteur d'icône unifié pour la modification de catégorie */}
+                        <IconPicker
+                          emoji={editCategoryForm.emoji}
+                          imageUrl={editCategoryForm.imageUrl}
+                          onChange={(emoji, imageUrl) => setEditCategoryForm({ ...editCategoryForm, emoji, imageUrl: imageUrl || "" })}
+                          accentColor="amber"
+                        />
+                        <div className="flex justify-end gap-1.5 pt-1.5 border-t border-slate-100">
+                          <button
+                            onClick={() => setEditingCategoryId(null)}
+                            className="text-[10px] font-bold text-slate-500 hover:bg-slate-100 bg-white border border-slate-200 px-2.5 py-1 rounded-lg transition"
+                          >
+                            Annuler
+                          </button>
+                          <button
+                            onClick={() => handleEditCategory(cat.id, editCategoryForm.name, editCategoryForm.emoji, editCategoryForm.imageUrl)}
+                            className="text-[10px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1 rounded-lg transition shadow-sm"
+                          >
+                            Enregistrer
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div
                       key={cat.id}
-                      className="flex flex-col gap-2 p-2.5 bg-amber-50/50 border border-amber-300 rounded-xl animate-fade-in"
+                      className="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100/50 border border-slate-200 rounded-xl transition group"
                     >
-                      <div className="flex gap-1.5 items-center">
-                        <input
-                          type="text"
-                          value={editCategoryForm.emoji}
-                          onChange={(e) => setEditCategoryForm({ ...editCategoryForm, emoji: e.target.value })}
-                          className="bg-white border border-slate-200 rounded-lg px-1 py-1 text-xs text-center font-bold focus:ring-1 focus:ring-amber-500 focus:outline-none w-10 shrink-0"
-                          placeholder="Emoji"
-                        />
-                        <input
-                          type="text"
-                          value={editCategoryForm.name}
-                          onChange={(e) => setEditCategoryForm({ ...editCategoryForm, name: e.target.value })}
-                          className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none flex-1 min-w-0 font-semibold text-slate-850"
-                          placeholder="Nom de catégorie"
-                        />
+                      <div className="flex items-center gap-2 min-w-0">
+                        {renderItemIcon(cat.emoji, cat.imageUrl)}
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold text-slate-800 truncate block">{cat.name}</span>
+                          <span className="text-[9px] text-slate-400 font-mono">
+                            {linkedCount} {linkedCount > 1 ? "produits liés" : "produit lié"}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex justify-end gap-1.5">
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {/* Modifier la catégorie */}
                         <button
-                          onClick={() => setEditingCategoryId(null)}
-                          className="text-[10px] font-bold text-slate-500 hover:bg-slate-100 bg-white border border-slate-200 px-2.5 py-1 rounded-lg transition"
+                          onClick={() => {
+                            setEditingCategoryId(cat.id);
+                            setEditCategoryForm({ name: cat.name || "", emoji: cat.emoji || "", imageUrl: cat.imageUrl || "" });
+                          }}
+                          className="p-1 text-slate-400 hover:text-slate-800 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg transition"
+                          title="Modifier la catégorie"
                         >
-                          Annuler
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Boutons d'ordonnancement */}
+                        <button
+                          onClick={() => handleMoveCategory(idx, "up")}
+                          disabled={idx === 0}
+                          className="p-1 text-slate-400 hover:text-slate-800 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition"
+                          title="Monter"
+                        >
+                          <ChevronUp className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => handleEditCategory(cat.id, editCategoryForm.name, editCategoryForm.emoji)}
-                          className="text-[10px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1 rounded-lg transition shadow-sm"
+                          onClick={() => handleMoveCategory(idx, "down")}
+                          disabled={idx === categories.length - 1}
+                          className="p-1 text-slate-400 hover:text-slate-800 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition"
+                          title="Descendre"
                         >
-                          Enregistrer
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Suppression de catégorie */}
+                        <button
+                          onClick={() => handleDeleteCategory(cat.id)}
+                          disabled={cat.id === "autre"}
+                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition"
+                          title="Supprimer la catégorie"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
                   );
-                }
+                })}
+              </div>
+            </section>
 
-                return (
-                  <div
-                    key={cat.id}
-                    className="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100/50 border border-slate-200 rounded-xl transition group"
+            {/* Gestion des Lieux de Stockage */}
+            <section className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm flex flex-col">
+              <div className="border-b border-slate-100 pb-3 mb-4 flex justify-between items-center">
+                <div>
+                  <h2 className="font-extrabold text-slate-800 text-sm flex items-center gap-2">
+                    <span>🏠</span> Lieux de Stockage / Stocks
+                  </h2>
+                  <p className="text-[10px] text-slate-400">Ajoutez, modifiez et gérez vos différents stocks physiques.</p>
+                </div>
+                <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full font-bold border border-emerald-100/50">
+                  {stockLocations.length} lieux
+                </span>
+              </div>
+
+              {/* Formulaire d'ajout rapide de lieu de stockage */}
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3 mb-4 space-y-2.5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Ajout Rapide :</span>
+                <div className="space-y-2">
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Nom (ex: Congélateur, Garage)"
+                      value={newLocName}
+                      onChange={(e) => setNewLocName(e.target.value)}
+                      className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none w-full font-medium"
+                    />
+                  </div>
+                  {/* Icône de lieu de stockage (Unifiée) */}
+                  <IconPicker
+                    emoji={newLocEmoji}
+                    imageUrl={newLocImageUrl}
+                    onChange={(emoji, imageUrl) => {
+                      setNewLocEmoji(emoji);
+                      setNewLocImageUrl(imageUrl || "");
+                    }}
+                    accentColor="emerald"
+                  />
+                  <button
+                    onClick={async () => {
+                      if (!newLocName.trim()) {
+                        alert("Veuillez saisir un nom pour le lieu de stockage.");
+                        return;
+                      }
+                      const cleanId = newLocName.trim().toLowerCase().replace(/[^a-z0-9]/g, "-");
+                      if (stockLocations.some((s) => s.id === cleanId)) {
+                        alert("Un lieu de stockage portant ce nom existe déjà.");
+                        return;
+                      }
+                      const newLoc: StockLocation = {
+                        id: cleanId,
+                        name: newLocName.trim(),
+                        emoji: newLocEmoji || "🧴",
+                        imageUrl: newLocImageUrl
+                      };
+                      const updatedLocs = [...stockLocations, newLoc];
+                      await saveToServer(products, categories, history, `Ajout du lieu de stockage ${newLoc.emoji} ${newLoc.name}`, users, updatedLocs);
+                      setNewLocName("");
+                      setNewLocEmoji("🧴");
+                      setNewLocImageUrl("");
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-4 rounded-xl transition shadow-sm w-full text-center"
                   >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-base bg-white p-1 rounded-lg shadow-sm border border-slate-100 shrink-0">
-                        {cat.emoji}
-                      </span>
-                      <div className="min-w-0">
-                        <span className="text-xs font-bold text-slate-800 truncate block">{cat.name}</span>
-                        <span className="text-[9px] text-slate-400 font-mono">
-                          {linkedCount} {linkedCount > 1 ? "produits liés" : "produit lié"}
-                        </span>
+                    Ajouter le lieu
+                  </button>
+                </div>
+              </div>
+
+              {/* Liste des lieux de stockage */}
+              <div className="space-y-1.5 overflow-y-auto max-h-[250px] pr-1">
+                {stockLocations.map((loc) => {
+                  const linkedCount = products.filter((p) => p.stockLocation === loc.id).length;
+                  const isEditing = editingLocId === loc.id;
+
+                  if (isEditing) {
+                    return (
+                      <div
+                        key={loc.id}
+                        className="flex flex-col gap-2.5 p-3 bg-emerald-50/50 border border-emerald-300 rounded-2xl animate-fade-in w-full"
+                      >
+                        <div>
+                          <input
+                            type="text"
+                            value={editLocForm.name}
+                            onChange={(e) => setEditLocForm({ ...editLocForm, name: e.target.value })}
+                            className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none w-full font-semibold text-slate-800"
+                            placeholder="Nom du lieu"
+                          />
+                        </div>
+                        {/* Sélecteur d'icône unifié pour la modification du lieu de stockage */}
+                        <IconPicker
+                          emoji={editLocForm.emoji}
+                          imageUrl={editLocForm.imageUrl}
+                          onChange={(emoji, imageUrl) => setEditLocForm({ ...editLocForm, emoji, imageUrl: imageUrl || "" })}
+                          accentColor="emerald"
+                        />
+                        <div className="flex justify-end gap-1.5 pt-1.5 border-t border-slate-100">
+                          <button
+                            onClick={() => setEditingLocId(null)}
+                            className="text-[10px] font-bold text-slate-500 hover:bg-slate-100 bg-white border border-slate-200 px-2.5 py-1 rounded-lg transition"
+                          >
+                            Annuler
+                          </button>
+                          <button
+                            onClick={() => handleEditStockLocation(loc.id, editLocForm.name, editLocForm.emoji, editLocForm.imageUrl)}
+                            className="text-[10px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1 rounded-lg transition shadow-sm"
+                          >
+                            Enregistrer
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={loc.id}
+                      className="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100/50 border border-slate-200 rounded-xl transition group"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        {renderItemIcon(loc.emoji, loc.imageUrl)}
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold text-slate-800 truncate block">{loc.name}</span>
+                          <span className="text-[9px] text-slate-400 font-mono">
+                            {linkedCount} {linkedCount > 1 ? "produits liés" : "produit lié"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {/* Modifier le lieu */}
+                        <button
+                          onClick={() => {
+                            setEditingLocId(loc.id);
+                            setEditLocForm({ name: loc.name || "", emoji: loc.emoji || "", imageUrl: loc.imageUrl || "" });
+                          }}
+                          className="p-1 text-slate-400 hover:text-slate-800 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg transition"
+                          title="Modifier le lieu de stockage"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Suppression de lieu */}
+                        <button
+                          onClick={async () => {
+                            if (stockLocations.length <= 1) {
+                              alert("Il doit y avoir au moins un lieu de stockage.");
+                              return;
+                            }
+                            if (confirm(`Voulez-vous vraiment supprimer le lieu de stockage "${loc.name}" ? Tous les produits liés seront basculés vers un autre lieu.`)) {
+                              const updatedLocs = stockLocations.filter(s => s.id !== loc.id);
+                              const fallbackId = updatedLocs[0]?.id || "cuisine";
+                              const updatedProducts = products.map(p => {
+                                if (p.stockLocation === loc.id) {
+                                  return { ...p, stockLocation: fallbackId };
+                                }
+                                return p;
+                              });
+                              await saveToServer(
+                                updatedProducts,
+                                categories,
+                                history,
+                                `Suppression du lieu de stockage : ${loc.name}`,
+                                users,
+                                updatedLocs
+                              );
+                            }
+                          }}
+                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                          title="Supprimer le lieu de stockage"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {/* Modifier la catégorie */}
-                      <button
-                        onClick={() => {
-                          setEditingCategoryId(cat.id);
-                          setEditCategoryForm({ name: cat.name, emoji: cat.emoji });
-                        }}
-                        className="p-1 text-slate-400 hover:text-slate-800 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg transition"
-                        title="Modifier la catégorie"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-
-                      {/* Boutons d'ordonnancement */}
-                      <button
-                        onClick={() => handleMoveCategory(idx, "up")}
-                        disabled={idx === 0}
-                        className="p-1 text-slate-400 hover:text-slate-800 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition"
-                        title="Monter"
-                      >
-                        <ChevronUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleMoveCategory(idx, "down")}
-                        disabled={idx === categories.length - 1}
-                        className="p-1 text-slate-400 hover:text-slate-800 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition"
-                        title="Descendre"
-                      >
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      </button>
-
-                      {/* Suppression de catégorie */}
-                      <button
-                        onClick={() => handleDeleteCategory(cat.id)}
-                        disabled={cat.id === "autre"}
-                        className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition"
-                        title="Supprimer la catégorie"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
+                  );
+                })}
+              </div>
+            </section>
+          </div>
 
           {/* ========================================================
               COLONNE DROITE : Gestion des Produits (col-span-7)
@@ -3022,27 +3852,40 @@ export default function App() {
                 </h2>
                 <p className="text-[10px] text-slate-400">Modifiez, triez et supprimez vos produits en lot ou individuellement.</p>
               </div>
-              <button
-                onClick={() => {
-                  setEditingProduct(null);
-                  setProdForm({
-                    name: "",
-                    category: categories[0]?.id || "autre",
-                    quantity: 1,
-                    minQuantity: 1,
-                    unit: "pièce",
-                    price: 0,
-                    notes: "",
-                    emoji: "📦",
-                    expiryDates: []
-                  });
-                  setIsProductModalOpen(true);
-                }}
-                className="bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm transition self-start sm:self-auto"
-              >
-                <PlusCircle className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Nouveau Produit</span>
-              </button>
+              <div className="flex gap-1.5 self-start sm:self-auto">
+                <button
+                  onClick={() => {
+                    setBulkAddCategory(categories[0]?.id || "autre");
+                    setBulkAddStockLocation(stockLocations[0]?.id || "cuisine");
+                    setIsBulkAddModalOpen(true);
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm transition"
+                >
+                  <PlusCircle className="w-3.5 h-3.5 text-emerald-200" />
+                  <span>Ajouter en lot</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingProduct(null);
+                    setProdForm({
+                      name: "",
+                      category: categories[0]?.id || "autre",
+                      quantity: 1,
+                      minQuantity: 1,
+                      unit: "pièces",
+                      price: 0,
+                      notes: "",
+                      emoji: "📦",
+                      expiryDates: []
+                    });
+                    setIsProductModalOpen(true);
+                  }}
+                  className="bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm transition"
+                >
+                  <PlusCircle className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Nouveau Produit</span>
+                </button>
+              </div>
             </div>
 
             {/* Barre de recherche & Filtre */}
@@ -3058,14 +3901,85 @@ export default function App() {
 
             {/* Actions groupées / Multi-sélection */}
             {selectedReglageProductIds.length > 0 && (
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 mb-4 flex items-center justify-between gap-3">
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 bg-amber-500 rounded-full animate-ping"></span>
                   <span className="text-xs font-bold text-amber-900">
                     {selectedReglageProductIds.length} {selectedReglageProductIds.length > 1 ? "produits sélectionnés" : "produit sélectionné"}
                   </span>
                 </div>
-                <div className="flex gap-1.5">
+                
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Changer la catégorie */}
+                  <select
+                    onChange={async (e) => {
+                      const catId = e.target.value;
+                      if (!catId) return;
+                      const catObj = categories.find((c) => c.id === catId);
+                      if (!catObj) return;
+
+                      const updated = products.map((p) => {
+                        if (selectedReglageProductIds.includes(p.id)) {
+                          return { ...p, category: catId };
+                        }
+                        return p;
+                      });
+
+                      await saveToServer(
+                        updated,
+                        categories,
+                        history,
+                        `Changement de catégorie en lot pour ${selectedReglageProductIds.length} produits vers : ${catObj.emoji} ${catObj.name}`
+                      );
+                      setSelectedReglageProductIds([]);
+                      e.target.value = "";
+                    }}
+                    className="text-[10px] bg-white border border-slate-200 rounded-lg px-2 py-1 font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                    defaultValue=""
+                  >
+                    <option value="" disabled>📁 Classer par catégorie...</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.emoji} {cat.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Changer de stock location */}
+                  <select
+                    onChange={async (e) => {
+                      const locId = e.target.value;
+                      if (!locId) return;
+                      const locObj = stockLocations.find((l) => l.id === locId);
+                      if (!locObj) return;
+
+                      const updated = products.map((p) => {
+                        if (selectedReglageProductIds.includes(p.id)) {
+                          return { ...p, stockLocation: locId };
+                        }
+                        return p;
+                      });
+
+                      await saveToServer(
+                        updated,
+                        categories,
+                        history,
+                        `Changement de stock en lot pour ${selectedReglageProductIds.length} produits vers : ${locObj.emoji} ${locObj.name}`
+                      );
+                      setSelectedReglageProductIds([]);
+                      e.target.value = "";
+                    }}
+                    className="text-[10px] bg-white border border-slate-200 rounded-lg px-2 py-1 font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                    defaultValue=""
+                  >
+                    <option value="" disabled>🏠 Ranger dans le stock...</option>
+                    {stockLocations.map((loc) => (
+                      <option key={loc.id} value={loc.id}>
+                        {loc.emoji} {loc.name}
+                      </option>
+                    ))}
+                  </select>
+
                   <button
                     onClick={() => setSelectedReglageProductIds([])}
                     className="text-[10px] font-extrabold text-slate-600 hover:bg-slate-200/50 bg-white border border-slate-200 px-2.5 py-1 rounded-lg transition"
@@ -3087,7 +4001,7 @@ export default function App() {
                     }}
                     className="text-[10px] font-extrabold text-white bg-rose-600 hover:bg-rose-700 px-2.5 py-1 rounded-lg transition shadow-sm"
                   >
-                    Supprimer la sélection
+                    Supprimer
                   </button>
                 </div>
               </div>
@@ -3095,10 +4009,12 @@ export default function App() {
 
             {/* Liste des produits sous forme de tableau ou ligne compacte */}
             {(() => {
-              const filteredProds = products.filter((p) => {
-                if (!searchQueryReglage.trim()) return true;
-                return p.name.toLowerCase().includes(searchQueryReglage.toLowerCase());
-              });
+              const filteredProds = products
+                .filter((p) => {
+                  if (!searchQueryReglage.trim()) return true;
+                  return normalizeStr(p.name).includes(normalizeStr(searchQueryReglage));
+                })
+                .sort((a, b) => (a.name || "").localeCompare(b.name || "", "fr"));
 
               if (filteredProds.length === 0) {
                 return (
@@ -3165,9 +4081,7 @@ export default function App() {
                               }}
                               className="rounded border-slate-300 text-amber-500 focus:ring-amber-500 h-3.5 w-3.5 shrink-0"
                             />
-                            <span className="text-base bg-white p-1 rounded-lg shadow-sm border border-slate-100 shrink-0">
-                              {p.emoji || "📦"}
-                            </span>
+                            {renderItemIcon(p.emoji, p.imageUrl, "w-7 h-7 flex items-center justify-center text-sm shrink-0 bg-white border border-slate-100 rounded-lg shadow-sm")}
                             <div className="min-w-0">
                               <span className="text-xs font-bold text-slate-800 block truncate">{p.name}</span>
                               <div className="flex flex-wrap gap-1 mt-0.5 items-center">
@@ -3192,11 +4106,11 @@ export default function App() {
                               onClick={() => {
                                 setEditingProduct(p);
                                 setProdForm({
-                                  name: p.name,
-                                  category: p.category,
-                                  quantity: p.quantity,
-                                  minQuantity: p.minQuantity,
-                                  unit: p.unit || "pièce",
+                                  name: p.name || "",
+                                  category: p.category || "autre",
+                                  quantity: p.quantity !== undefined && p.quantity !== null ? p.quantity : 1,
+                                  minQuantity: p.minQuantity !== undefined && p.minQuantity !== null ? p.minQuantity : 1,
+                                  unit: p.unit || "pièces",
                                   price: p.price || 0,
                                   notes: p.notes || "",
                                   emoji: p.emoji || "📦",
@@ -3275,33 +4189,32 @@ export default function App() {
 
               <form onSubmit={handleSaveProduct} className="p-5 space-y-4">
                 
-                {/* Nom et Emoji */}
-                <div className="grid grid-cols-4 gap-3">
-                  <div className="col-span-1">
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Emoji</label>
-                    <input
-                      type="text"
-                      maxLength={2}
-                      value={prodForm.emoji}
-                      onChange={(e) => setProdForm({ ...prodForm, emoji: e.target.value })}
-                      className="w-full text-center text-xl bg-slate-50 border border-slate-200 rounded-xl py-2 focus:ring-1 focus:ring-emerald-500 focus:outline-none"
-                    />
-                  </div>
-                  <div className="col-span-3">
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Nom du Produit</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ex: Lait d'Amande Bio"
-                      value={prodForm.name}
-                      onChange={(e) => setProdForm({ ...prodForm, name: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:outline-none"
-                    />
-                  </div>
+                {/* Nom du Produit */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Nom du Produit</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: Lait d'Amande Bio"
+                    value={prodForm.name}
+                    onChange={(e) => setProdForm({ ...prodForm, name: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                  />
+                </div>
+
+                {/* Icône du produit (Unifiée) */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Icône du Produit</label>
+                  <IconPicker
+                    emoji={prodForm.emoji}
+                    imageUrl={prodForm.imageUrl}
+                    onChange={(emoji, imageUrl) => setProdForm({ ...prodForm, emoji, imageUrl })}
+                    accentColor="emerald"
+                  />
                 </div>
 
                 {/* Catégorie et Unité */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Catégorie</label>
                     <select
@@ -3325,11 +4238,44 @@ export default function App() {
                     >
                       <option value="pièces">pièces (u)</option>
                       <option value="L">Litres (L)</option>
+                      <option value="ml">Millilitres (ml)</option>
                       <option value="kg">Kilogrammes (kg)</option>
                       <option value="g">Grammes (g)</option>
                       <option value="paquets">paquets</option>
+                      <option value="sachets">sachets</option>
                       <option value="bouteilles">bouteilles</option>
+                      <option value="canettes">canettes</option>
+                      <option value="briques">briques</option>
+                      <option value="boîtes">boîtes (conserve)</option>
+                      <option value="bocaux">bocaux</option>
                       <option value="pots">pots</option>
+                      <option value="barquettes">barquettes</option>
+                      <option value="rouleaux">rouleaux</option>
+                      <option value="tranches">tranches</option>
+                      <option value="gousses">gousses</option>
+                    </select>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase">Lieu de Stockage</label>
+                      <button 
+                        type="button"
+                        onClick={() => setIsStockLocationModalOpen(true)}
+                        className="text-[9px] text-emerald-700 hover:underline font-bold"
+                      >
+                        Gérer +
+                      </button>
+                    </div>
+                    <select
+                      value={prodForm.stockLocation}
+                      onChange={(e) => setProdForm({ ...prodForm, stockLocation: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none font-medium text-slate-800"
+                    >
+                      {stockLocations.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.emoji} {s.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -3344,7 +4290,7 @@ export default function App() {
                       min="0"
                       required
                       value={prodForm.quantity}
-                      onChange={(e) => setProdForm({ ...prodForm, quantity: Number(e.target.value) })}
+                      onChange={(e) => setProdForm({ ...prodForm, quantity: e.target.value })}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 focus:ring-1 focus:ring-emerald-500"
                     />
                   </div>
@@ -3356,7 +4302,7 @@ export default function App() {
                       min="0"
                       required
                       value={prodForm.minQuantity}
-                      onChange={(e) => setProdForm({ ...prodForm, minQuantity: Number(e.target.value) })}
+                      onChange={(e) => setProdForm({ ...prodForm, minQuantity: e.target.value })}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 focus:ring-1 focus:ring-emerald-500"
                     />
                   </div>
@@ -3368,7 +4314,7 @@ export default function App() {
                       min="0"
                       required
                       value={prodForm.price}
-                      onChange={(e) => setProdForm({ ...prodForm, price: Number(e.target.value) })}
+                      onChange={(e) => setProdForm({ ...prodForm, price: e.target.value })}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 focus:ring-1 focus:ring-emerald-500"
                     />
                   </div>
@@ -3552,7 +4498,7 @@ export default function App() {
                             <button
                               onClick={() => {
                                 setEditingCategoryId(cat.id);
-                                setEditCategoryForm({ name: cat.name, emoji: cat.emoji });
+                                setEditCategoryForm({ name: cat.name || "", emoji: cat.emoji || "" });
                               }}
                               title="Modifier cette catégorie"
                               className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-emerald-600 transition opacity-100 md:opacity-0 md:group-hover:opacity-100"
@@ -3803,6 +4749,152 @@ export default function App() {
                     </div>
                   </div>
                 )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ==========================================
+          MODAL D'INSTALLATION DE L'APPLICATION (PWA)
+          ========================================== */}
+      <AnimatePresence>
+        {isPwaModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-3xl border border-slate-200 max-w-md w-full overflow-hidden shadow-2xl"
+            >
+              {/* Header */}
+              <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-slate-800 text-sm">Installer l'application Mobile 📲</h3>
+                  <p className="text-[10px] text-slate-500">PantryPal - Gestion de Stock & Courses</p>
+                </div>
+                <button
+                  onClick={() => setIsPwaModalOpen(false)}
+                  className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-700 transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-5 space-y-4">
+                <div className="text-center">
+                  <span className="text-4xl">🍳</span>
+                  <p className="text-xs text-slate-600 mt-2">
+                    Ajoutez PantryPal à l'écran d'accueil de votre téléphone pour l'utiliser comme une vraie application : plein écran, sans barre d'adresse, et plus rapide !
+                  </p>
+                </div>
+
+                {/* Bouton d'installation native (si supporté par Chrome/Android) */}
+                {deferredPrompt ? (
+                  <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 text-center">
+                    <p className="text-xs font-semibold text-emerald-800 mb-2">Votre navigateur supporte l'installation directe !</p>
+                    <button
+                      onClick={async () => {
+                        if (deferredPrompt) {
+                          deferredPrompt.prompt();
+                          const { outcome } = await deferredPrompt.userChoice;
+                          if (outcome === "accepted") {
+                            setDeferredPrompt(null);
+                            setIsPwaModalOpen(false);
+                          }
+                        }
+                      }}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-sm flex items-center justify-center gap-2"
+                    >
+                      <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+                      <span>Installer PantryPal maintenant</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="border border-slate-150 rounded-2xl overflow-hidden">
+                    {/* Instructions Manuelles par OS */}
+                    <div className="bg-slate-50 border-b border-slate-100 p-2 flex gap-1">
+                      <div className="flex-1 text-center font-bold text-xs text-slate-700 py-1 border-r border-slate-200 flex items-center justify-center gap-1.5">
+                        🍎 iPhone / iPad (Safari)
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 space-y-3 text-xs text-slate-700">
+                      <div className="flex gap-2.5 items-start">
+                        <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</span>
+                        <p>Ouvrez cette page dans le navigateur <strong className="font-semibold text-slate-800">Safari</strong> sur votre iPhone.</p>
+                      </div>
+                      <div className="flex gap-2.5 items-start">
+                        <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">2</span>
+                        <p>Appuyez sur le bouton de <strong className="font-semibold text-slate-800">Partage</strong> en bas de l'écran (le carré avec une flèche vers le haut <span className="bg-slate-100 px-1 rounded">⎋</span>).</p>
+                      </div>
+                      <div className="flex gap-2.5 items-start">
+                        <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</span>
+                        <p>Faites défiler vers le bas et appuyez sur <strong className="font-semibold text-slate-800">Sur l'écran d'accueil</strong> (<span className="bg-slate-100 px-1 rounded">⊕</span>).</p>
+                      </div>
+                      <div className="flex gap-2.5 items-start">
+                        <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">4</span>
+                        <p>Validez en haut à droite avec le bouton <strong className="font-semibold text-emerald-700">Ajouter</strong>.</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 border-t border-b border-slate-100 p-2 flex gap-1">
+                      <div className="flex-1 text-center font-bold text-xs text-slate-700 py-1 flex items-center justify-center gap-1.5">
+                        🤖 Android (Chrome)
+                      </div>
+                    </div>
+
+                    <div className="p-4 space-y-3 text-xs text-slate-700">
+                      <div className="flex gap-2.5 items-start">
+                        <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</span>
+                        <p>Ouvrez cette page dans <strong className="font-semibold text-slate-800">Google Chrome</strong> sur votre appareil Android.</p>
+                      </div>
+                      <div className="flex gap-2.5 items-start">
+                        <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">2</span>
+                        <p>Appuyez sur les <strong className="font-semibold text-slate-800">trois points verticaux</strong> en haut à droite de l'écran.</p>
+                      </div>
+                      <div className="flex gap-2.5 items-start">
+                        <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</span>
+                        <p>Sélectionnez <strong className="font-semibold text-slate-800">Installer l'application</strong> ou <strong className="font-semibold text-slate-800">Ajouter à l'écran d'accueil</strong>.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Copier le lien pour l'ouvrir facilement sur mobile */}
+                <div className="pt-2">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                    Adresse de l'application (à ouvrir sur mobile) :
+                  </label>
+                  <div className="flex gap-2 bg-slate-50 border border-slate-200 rounded-xl p-1.5 items-center">
+                    <input
+                      type="text"
+                      readOnly
+                      value={window.location.href.split("#")[0]}
+                      className="bg-transparent border-none text-[10px] font-mono text-slate-600 flex-1 focus:outline-none focus:ring-0 select-all"
+                    />
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(window.location.href.split("#")[0]);
+                        alert("Lien copié ! Vous pouvez maintenant vous l'envoyer pour l'ouvrir sur votre mobile.");
+                      }}
+                      className="bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg transition shrink-0"
+                    >
+                      Copier
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-2">
+                <button
+                  onClick={() => setIsPwaModalOpen(false)}
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white py-2 rounded-xl text-xs font-bold transition text-center"
+                >
+                  J'ai compris
+                </button>
               </div>
             </motion.div>
           </div>
@@ -4106,6 +5198,609 @@ export default function App() {
                     Confirmer l'importation
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 6. MODAL : GESTION DES LISTES & WORKSPACES */}
+      <AnimatePresence>
+        {isWorkspaceModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-3xl border border-slate-200 max-w-md w-full overflow-hidden shadow-xl"
+            >
+              <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                <h3 className="font-bold text-slate-800 text-sm">📁 Mes Stocks & Listes Collaboratives</h3>
+                <button
+                  onClick={() => setIsWorkspaceModalOpen(false)}
+                  className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-700 transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-4 space-y-4">
+                <p className="text-[11px] text-slate-500">
+                  Basculez entre différents stocks (ex: maison principal, chalet, bureau) ou créez-en un nouveau instantanément.
+                </p>
+
+                {/* Liste existante */}
+                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                  {allLists.map((lst) => {
+                    const isActive = lst.id === listId;
+                    return (
+                      <div 
+                        key={lst.id}
+                        onClick={() => {
+                          window.location.hash = lst.id;
+                          setListId(lst.id);
+                          setIsWorkspaceModalOpen(false);
+                        }}
+                        className={`p-3 rounded-2xl border transition cursor-pointer flex items-center justify-between ${
+                          isActive 
+                            ? "bg-emerald-50 border-emerald-500 shadow-sm" 
+                            : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1 pr-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">📂</span>
+                            <span className="font-bold text-xs truncate text-slate-800">{lst.name || lst.id}</span>
+                            <span className="font-mono text-[9px] text-slate-400 bg-slate-100 px-1 rounded">#{lst.id}</span>
+                          </div>
+                          <p className="text-[10px] text-slate-500 mt-1 truncate">
+                            Dernière modif : {lst.lastModifiedBy} le {new Date(lst.lastModifiedAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-[10px] bg-slate-200/80 text-slate-700 font-bold px-2 py-0.5 rounded-full">
+                            {lst.itemsCount} art.
+                          </span>
+                          {isActive && (
+                            <span className="text-[10px] bg-emerald-600 text-white font-bold px-2 py-0.5 rounded-full">
+                              Actif
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Formulaire nouveau workspace */}
+                <div className="pt-3 border-t border-slate-100 space-y-3">
+                  <h4 className="text-xs font-bold text-slate-700">🆕 Créer un nouveau Stock / Liste</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">ID (Ex: chalet-smith)</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="chalet-smith"
+                        value={newWorkspaceId}
+                        onChange={(e) => setNewWorkspaceId(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, ""))}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Nom (Ex: Mon Chalet)</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Mon Chalet 🏔️"
+                        value={newWorkspaceName}
+                        onChange={(e) => setNewWorkspaceName(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!newWorkspaceId.trim()) return;
+                      const cleanId = newWorkspaceId.trim().toLowerCase().replace(/\s+/g, "-");
+                      window.location.hash = cleanId;
+                      setListId(cleanId);
+                      
+                      const newName = newWorkspaceName.trim() || `Liste : ${cleanId}`;
+                      
+                      fetch(`/api/lists/${cleanId}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          id: cleanId,
+                          name: newName,
+                          products: CLIENT_DEFAULT_PRODUCTS,
+                          categories: CLIENT_DEFAULT_CATEGORIES,
+                          stockLocations: CLIENT_DEFAULT_STOCK_LOCATIONS,
+                          history: [],
+                          logs: [{
+                            user: currentUser,
+                            date: new Date().toISOString(),
+                            details: `Création du nouveau stock collaboratif : ${newName}`
+                          }],
+                          lastModifiedAt: new Date().toISOString(),
+                          lastModifiedBy: currentUser
+                        })
+                      }).then(() => {
+                        setListName(newName);
+                        fetchList(true);
+                        fetchAllLists();
+                      });
+
+                      setNewWorkspaceId("");
+                      setNewWorkspaceName("");
+                      setIsWorkspaceModalOpen(false);
+                    }}
+                    disabled={!newWorkspaceId.trim()}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 text-white font-bold py-2 rounded-xl text-xs transition"
+                  >
+                    Créer et basculer
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 7. MODAL : GESTION DES LIEUX DE STOCKAGE (Plusieurs stocks différents) */}
+      <AnimatePresence>
+        {isStockLocationModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-3xl border border-slate-200 max-w-sm w-full overflow-hidden shadow-xl"
+            >
+              <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                <h3 className="font-bold text-slate-800 text-sm">⚙️ Gérer les lieux de stockage</h3>
+                <button
+                  onClick={() => setIsStockLocationModalOpen(false)}
+                  className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-700 transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-4 space-y-4">
+                <p className="text-[11px] text-slate-500">
+                  Définissez les différents stocks physiques de cette liste (ex: Frigo, Cave, Congélateur).
+                </p>
+
+                {/* Lieux existants */}
+                <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+                  {stockLocations.map((loc) => {
+                    const itemsInLoc = products.filter(p => p.stockLocation === loc.id).length;
+                    return (
+                      <div 
+                        key={loc.id}
+                        className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-slate-50 text-xs"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">{loc.emoji}</span>
+                          <span className="font-semibold text-slate-800">{loc.name}</span>
+                          <span className="text-[10px] text-slate-400">({itemsInLoc} art.)</span>
+                        </div>
+                        {stockLocations.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const updatedLocs = stockLocations.filter(s => s.id !== loc.id);
+                              const updatedProducts = products.map(p => {
+                                if (p.stockLocation === loc.id) {
+                                  return { ...p, stockLocation: updatedLocs[0]?.id || "cuisine" };
+                                }
+                                return p;
+                              });
+                              await saveToServer(
+                                updatedProducts, 
+                                categories, 
+                                history, 
+                                `Suppression du lieu de stockage : ${loc.name}`,
+                                users,
+                                updatedLocs
+                              );
+                            }}
+                            className="p-1 text-slate-400 hover:text-rose-500 transition"
+                            title="Supprimer ce lieu de stockage"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Formulaire ajout lieu de stockage */}
+                <form 
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const form = e.currentTarget;
+                    const emoji = (form.elements.namedItem("emoji") as HTMLInputElement).value || "📦";
+                    const name = (form.elements.namedItem("name") as HTMLInputElement).value.trim();
+                    if (!name) return;
+                    const id = name.toLowerCase().replace(/[^a-z0-9]/g, "-");
+
+                    if (stockLocations.some(s => s.id === id)) {
+                      alert("Ce lieu de stockage existe déjà !");
+                      return;
+                    }
+
+                    const newLoc: StockLocation = { id, name, emoji };
+                    const updatedLocs = [...stockLocations, newLoc];
+
+                    await saveToServer(
+                      products,
+                      categories,
+                      history,
+                      `Création du lieu de stockage : ${emoji} ${name}`,
+                      users,
+                      updatedLocs
+                    );
+                    form.reset();
+                  }}
+                  className="pt-3 border-t border-slate-100 space-y-3"
+                >
+                  <h4 className="text-xs font-bold text-slate-700">➕ Ajouter un lieu de stockage</h4>
+                  <div className="grid grid-cols-4 gap-2">
+                    <div className="col-span-1">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Emoji</label>
+                      <input
+                        name="emoji"
+                        type="text"
+                        maxLength={2}
+                        defaultValue="🧴"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-1.5 text-center text-sm focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Nom du lieu</label>
+                      <input
+                        name="name"
+                        type="text"
+                        required
+                        placeholder="Salle de Bain, Garage..."
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-xl text-xs transition shadow-sm"
+                  >
+                    Ajouter le lieu
+                  </button>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 8. MODAL : AJOUT EN LOT (BATCH ADD PRODUCTS) */}
+      <AnimatePresence>
+        {isBulkAddModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-3xl border border-slate-200 max-w-lg w-full overflow-hidden shadow-xl"
+            >
+              <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                <div>
+                  <h3 className="font-extrabold text-slate-800 text-sm flex items-center gap-2">
+                    <span>📦</span> {bulkAddStep === "input" ? "Ajout de produits en lot" : `Détecté : ${bulkAddDrafts.length} produits`}
+                  </h3>
+                  <p className="text-[10px] text-slate-400">
+                    {bulkAddStep === "input" 
+                      ? "Ajoutez rapidement plusieurs articles à votre inventaire." 
+                      : "Modifiez directement les détails de chaque produit détecté avant validation."}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsBulkAddModalOpen(false);
+                    setBulkAddStep("input");
+                    setBulkAddDrafts([]);
+                  }}
+                  className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-700 transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-4">
+                {bulkAddStep === "input" ? (
+                  <>
+                    {/* Zone de texte de saisie */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                        Liste des produits (Un par ligne ou séparés par des virgules)
+                      </label>
+                      <textarea
+                        rows={5}
+                        value={bulkAddText}
+                        onChange={(e) => setBulkAddText(e.target.value)}
+                        placeholder="Exemple :&#13;Lait demi-écrémé&#13;Beurre doux&#13;Fromage râpé, Pâtes Coquillettes"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-semibold focus:ring-1 focus:ring-emerald-500 focus:outline-none placeholder:text-slate-400 placeholder:font-normal"
+                      />
+                      <p className="text-[9px] text-slate-400 mt-1">
+                        💡 Astuce : Les emojis correspondants seront détectés automatiquement (ex: Lait 🥛, Beurre 🧈) !
+                      </p>
+                    </div>
+
+                    {/* Sélections de destination */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">📁 Catégorie</label>
+                        <select
+                          value={bulkAddCategory}
+                          onChange={(e) => setBulkAddCategory(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-semibold focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                        >
+                          {categories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.emoji} {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">🏠 Lieu de stockage</label>
+                        <select
+                          value={bulkAddStockLocation}
+                          onChange={(e) => setBulkAddStockLocation(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-semibold focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                        >
+                          {stockLocations.map((loc) => (
+                            <option key={loc.id} value={loc.id}>
+                              {loc.emoji} {loc.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Configuration par défaut de quantité et d'unité */}
+                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Quantité initiale</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={bulkAddQuantity}
+                          onChange={(e) => setBulkAddQuantity(Math.max(1, Number(e.target.value)))}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-semibold focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Unité</label>
+                        <select
+                          value={bulkAddUnit}
+                          onChange={(e) => setBulkAddUnit(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-semibold focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                        >
+                          <option value="pièces">pièces</option>
+                          <option value="paquets">paquets</option>
+                          <option value="sachets">sachets</option>
+                          <option value="bouteilles">bouteilles</option>
+                          <option value="canettes">canettes</option>
+                          <option value="briques">briques</option>
+                          <option value="boîtes">boîtes (conserve)</option>
+                          <option value="bocaux">bocaux</option>
+                          <option value="pots">pots</option>
+                          <option value="barquettes">barquettes</option>
+                          <option value="rouleaux">rouleaux</option>
+                          <option value="tranches">tranches</option>
+                          <option value="gousses">gousses</option>
+                          <option value="L">Litres (L)</option>
+                          <option value="ml">Millilitres (ml)</option>
+                          <option value="kg">kilogrammes (kg)</option>
+                          <option value="g">grammes (g)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBulkAddText("");
+                          setIsBulkAddModalOpen(false);
+                        }}
+                        className="flex-1 border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold py-2.5 rounded-xl text-xs transition"
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleBulkAdd}
+                        disabled={!bulkAddText.trim()}
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md shadow-emerald-100"
+                      >
+                        Analyser & Configurer
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Liste des brouillons détectés modifiables directement */}
+                    <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+                      {bulkAddDrafts.map((draft, idx) => (
+                        <div key={draft.id} className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2 text-left relative">
+                          <div className="flex gap-2 items-center">
+                            <input
+                              type="text"
+                              maxLength={2}
+                              value={draft.emoji}
+                              onChange={(e) => {
+                                const updated = bulkAddDrafts.map((d, i) => i === idx ? { ...d, emoji: e.target.value } : d);
+                                setBulkAddDrafts(updated);
+                              }}
+                              className="w-10 text-center bg-white border border-slate-200 rounded-lg py-1 text-sm font-bold focus:ring-1 focus:ring-emerald-500"
+                              placeholder="Emoji"
+                            />
+                            <input
+                              type="text"
+                              value={draft.name}
+                              onChange={(e) => {
+                                const updated = bulkAddDrafts.map((d, i) => i === idx ? { ...d, name: e.target.value } : d);
+                                setBulkAddDrafts(updated);
+                              }}
+                              className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-semibold focus:ring-1 focus:ring-emerald-500"
+                              placeholder="Nom"
+                            />
+                            <button
+                              onClick={() => {
+                                const updated = bulkAddDrafts.filter((_, i) => i !== idx);
+                                setBulkAddDrafts(updated);
+                              }}
+                              className="p-1 hover:bg-slate-200 rounded text-rose-500 transition shrink-0"
+                              title="Supprimer ce produit"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-400 uppercase">📁 Catégorie</label>
+                              <select
+                                value={draft.category}
+                                onChange={(e) => {
+                                  const updated = bulkAddDrafts.map((d, i) => i === idx ? { ...d, category: e.target.value } : d);
+                                  setBulkAddDrafts(updated);
+                                }}
+                                className="w-full bg-white border border-slate-200 rounded-lg px-1.5 py-1 text-[11px] font-semibold focus:ring-1 focus:ring-emerald-500"
+                              >
+                                {categories.map((cat) => (
+                                  <option key={cat.id} value={cat.id}>{cat.emoji} {cat.name}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-400 uppercase">🏠 Stockage</label>
+                              <select
+                                value={draft.stockLocation}
+                                onChange={(e) => {
+                                  const updated = bulkAddDrafts.map((d, i) => i === idx ? { ...d, stockLocation: e.target.value } : d);
+                                  setBulkAddDrafts(updated);
+                                }}
+                                className="w-full bg-white border border-slate-200 rounded-lg px-1.5 py-1 text-[11px] font-semibold focus:ring-1 focus:ring-emerald-500"
+                              >
+                                {stockLocations.map((loc) => (
+                                  <option key={loc.id} value={loc.id}>{loc.emoji} {loc.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-400 uppercase">Qté</label>
+                              <input
+                                type="number"
+                                min={1}
+                                value={draft.quantity}
+                                onChange={(e) => {
+                                  const val = Math.max(1, Number(e.target.value));
+                                  const updated = bulkAddDrafts.map((d, i) => i === idx ? { ...d, quantity: val } : d);
+                                  setBulkAddDrafts(updated);
+                                }}
+                                className="w-full bg-white border border-slate-200 rounded-lg px-1.5 py-1 text-[11px] font-bold text-slate-800 focus:ring-1 focus:ring-emerald-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-400 uppercase">Unité</label>
+                              <select
+                                value={draft.unit}
+                                onChange={(e) => {
+                                  const updated = bulkAddDrafts.map((d, i) => i === idx ? { ...d, unit: e.target.value } : d);
+                                  setBulkAddDrafts(updated);
+                                }}
+                                className="w-full bg-white border border-slate-200 rounded-lg px-1.5 py-1 text-[11px] font-semibold focus:ring-1 focus:ring-emerald-500"
+                              >
+                                <option value="pièces">pièces</option>
+                                <option value="paquets">paquets</option>
+                                <option value="bouteilles">bouteilles</option>
+                                <option value="canettes">canettes</option>
+                                <option value="L">L</option>
+                                <option value="kg">kg</option>
+                                <option value="g">g</option>
+                              </select>
+                            </div>
+
+                            <div className="relative">
+                              <label className="block text-[9px] font-bold text-slate-400 uppercase">Image</label>
+                              <div className="flex gap-1">
+                                <input
+                                  type="text"
+                                  value={draft.imageUrl || ""}
+                                  onChange={(e) => {
+                                    const updated = bulkAddDrafts.map((d, i) => i === idx ? { ...d, imageUrl: e.target.value } : d);
+                                    setBulkAddDrafts(updated);
+                                  }}
+                                  className="w-full bg-white border border-slate-200 rounded-lg px-1 py-1 text-[9px] focus:ring-1 focus:ring-emerald-500"
+                                  placeholder="URL ou..."
+                                />
+                                <label className="cursor-pointer bg-slate-200 hover:bg-slate-300 rounded px-1.5 py-1 text-[9px] font-bold text-slate-600 shrink-0 transition flex items-center justify-center">
+                                  📁
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        handleUploadBase64(file, (base64) => {
+                                          const updated = bulkAddDrafts.map((d, i) => i === idx ? { ...d, imageUrl: base64 } : d);
+                                          setBulkAddDrafts(updated);
+                                        });
+                                      }
+                                    }}
+                                  />
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Actions de l'étape de brouillon */}
+                    <div className="flex gap-2 pt-3 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => setBulkAddStep("input")}
+                        className="flex-1 border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold py-2.5 rounded-xl text-xs transition"
+                      >
+                        Retour à la saisie
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleBulkAdd}
+                        disabled={bulkAddDrafts.length === 0}
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md shadow-emerald-100"
+                      >
+                        Confirmer et Enregistrer ({bulkAddDrafts.length})
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </motion.div>
           </div>

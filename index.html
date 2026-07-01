@@ -7,10 +7,46 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="theme-color" content="#0f172a" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
     <title>PantryPal - Gestion de Stock & Courses en temps réel</title>
   </head>
   <body class="h-full">
     <div id="root" class="h-full"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Enregistrement du Service Worker uniquement hors du mode développement pour éviter les conflits avec Vite
+      if ("serviceWorker" in navigator && 
+          !window.location.hostname.includes("localhost") && 
+          !window.location.hostname.includes("127.0.0.1") && 
+          !window.location.hostname.includes("ais-dev")) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("/sw.js")
+            .then((reg) => console.log("[PWA] Service Worker registered successfully:", reg.scope))
+            .catch((err) => console.error("[PWA] Service Worker registration failed:", err));
+        });
+      } else if ("serviceWorker" in navigator) {
+        // En mode développement, on désenregistre activement tout Service Worker existant pour nettoyer le cache de développement
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          let hasUnregistered = false;
+          for (let registration of registrations) {
+            registration.unregister().then((success) => {
+              if (success) {
+                console.log("[PWA] Service Worker précédent désenregistré avec succès pour le mode développement.");
+                hasUnregistered = true;
+              }
+            });
+          }
+          if (hasUnregistered) {
+            // Recharger une seule fois pour vider l'interception
+            setTimeout(() => {
+              window.location.reload();
+            }, 500);
+          }
+        }).catch((err) => console.warn("[PWA] Échec du nettoyage du Service Worker :", err));
+      }
+    </script>
   </body>
 </html>

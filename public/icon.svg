@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <!-- Emerald Accent Gradient -->
+    <linearGradient id="emeraldGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <!-- Amber Accent Gradient -->
+    <linearGradient id="amberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <!-- Glass Reflections -->
+    <linearGradient id="glassGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.15" />
+      <stop offset="30%" stop-color="#ffffff" stop-opacity="0.05" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.0" />
+    </linearGradient>
+  </defs>
+
+  <!-- Icon Rounded Background -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+
+  <!-- Outer Ring Glow -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="url(#emeraldGrad)" stroke-width="4" stroke-opacity="0.3" stroke-dasharray="8 8" />
+
+  <!-- Main Container: Styled Jar & Groceries -->
+  <g transform="translate(128, 100)">
+    <!-- Lid of the pantry jar -->
+    <rect x="64" y="16" width="128" height="24" rx="12" fill="url(#emeraldGrad)" />
+    <rect x="80" y="40" width="96" height="12" rx="4" fill="#047857" />
+
+    <!-- Jar Body (Glass Outlines) -->
+    <path d="M48 64 H208 C224 64, 240 80, 240 104 V264 C240 288, 224 304, 208 304 H48 C32 304, 16 288, 16 264 V104 C16 80, 32 64, 48 64 Z" fill="none" stroke="#e2e8f0" stroke-width="12" stroke-linejoin="round" />
+    
+    <!-- Food Items Inside (Stylized Silhouette) -->
+    <!-- Apple / Fruit -->
+    <circle cx="80" cy="240" r="32" fill="url(#amberGrad)" />
+    <path d="M80 208 C80 198, 90 192, 96 192" fill="none" stroke="#f59e0b" stroke-width="6" stroke-linecap="round" />
+    <!-- Leaf -->
+    <path d="M84 206 C90 190, 110 186, 114 198 C114 214, 98 214, 84 206 Z" fill="#10b981" />
+
+    <!-- Carton / Product Box -->
+    <rect x="136" y="144" width="64" height="120" rx="8" fill="#38bdf8" />
+    <!-- Product Label -->
+    <rect x="146" y="176" width="44" height="40" rx="4" fill="#ffffff" />
+    <line x1="152" y1="188" x2="184" y2="188" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round" />
+    <line x1="152" y1="200" x2="174" y2="200" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round" />
+
+    <!-- Sparkles of freshness -->
+    <path d="M190 80 L195 90 L205 95 L195 100 L190 110 L185 100 L175 95 L185 90 Z" fill="#38bdf8" />
+    <path d="M60 110 L63 115 L68 118 L63 121 L60 126 L57 121 L52 118 L57 115 Z" fill="#f59e0b" />
+
+    <!-- Glass Reflection Overlay -->
+    <path d="M16 104 V264 C16 288, 32 304, 48 304 H110 V64 H48 C32 64, 16 80, 16 104 Z" fill="url(#glassGrad)" />
+  </g>
+</svg>
