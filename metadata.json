@@ -1,5 +1,5 @@
 {
-  "name": "PantryPal",
+  "name": "Check&Reload",
   "description": "Application de gestion de stock, liste de courses intelligente collaborative en temps réel et scan de tickets de caisse par IA.",
   "requestFramePermissions": [
     "camera"

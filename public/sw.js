@@ -1,10 +1,15 @@
-const CACHE_NAME = "pantrypal-v1";
+const CACHE_NAME = "checkandreload-v2";
 const ASSETS_TO_CACHE = [
   "/",
   "/index.html",
   "/manifest.json",
   "/icon.svg",
-  "/icon-maskable.svg"
+  "/icon-maskable.svg",
+  "/icon.png",
+  "/apple-touch-icon.png",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/icon-maskable.png"
 ];
 
 // Install Event: Cache critical static assets

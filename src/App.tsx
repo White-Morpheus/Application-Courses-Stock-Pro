@@ -52,7 +52,33 @@ import {
 const handleUploadBase64 = (file: File, callback: (base64: string) => void) => {
   const reader = new FileReader();
   reader.onloadend = () => {
-    callback(reader.result as string);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      let width = img.width;
+      let height = img.height;
+      
+      const MAX_SIZE = 400; // Resize to max 400px
+      if (width > height && width > MAX_SIZE) {
+        height *= MAX_SIZE / width;
+        width = MAX_SIZE;
+      } else if (height > MAX_SIZE) {
+        width *= MAX_SIZE / height;
+        height = MAX_SIZE;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        // Compress using WebP or JPEG
+        callback(canvas.toDataURL("image/webp", 0.8));
+      } else {
+        callback(reader.result as string);
+      }
+    };
+    img.src = reader.result as string;
   };
   reader.readAsDataURL(file);
 };
@@ -94,6 +120,17 @@ const IconPicker = ({
   const [activeTab, setActiveTab] = useState<'emoji' | 'image'>(
     imageUrl && imageUrl.trim() ? 'image' : 'emoji'
   );
+  
+  const [customEmojis, setCustomEmojis] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("pantry_custom_emojis");
+      if (saved) return JSON.parse(saved);
+    } catch(e) {}
+    return ["🍎", "🥦", "🥩", "🧀", "🍞", "🥛", "🥤", "🧼", "🧴", "❄️", "🍳", "📦"];
+  });
+
+  const [isEditingEmojis, setIsEditingEmojis] = useState(false);
+  const [emojiInputStr, setEmojiInputStr] = useState("");
 
   useEffect(() => {
     if (imageUrl && imageUrl.trim()) {
@@ -102,6 +139,12 @@ const IconPicker = ({
       setActiveTab('emoji');
     }
   }, [imageUrl]);
+
+  const saveCustomEmojis = (newEmojis: string[]) => {
+    const uniqueEmojis = Array.from(new Set(newEmojis)).filter(e => e.trim().length > 0).slice(0, 20); // max 20
+    setCustomEmojis(uniqueEmojis);
+    localStorage.setItem("pantry_custom_emojis", JSON.stringify(uniqueEmojis));
+  };
 
   const activeBg = accentColor === "emerald" ? "bg-emerald-600 text-white" : "bg-amber-500 text-white";
   const ringColor = accentColor === "emerald" ? "focus:ring-emerald-500" : "focus:ring-amber-500";
@@ -151,7 +194,28 @@ const IconPicker = ({
       <div className="pt-1 border-t border-slate-100">
         {activeTab === 'emoji' ? (
           <div className="space-y-2">
-            <label className="block text-[9px] font-bold text-slate-400 uppercase">Saisir ou choisir un Emoji</label>
+            <div className="flex justify-between items-center">
+              <label className="block text-[9px] font-bold text-slate-400 uppercase">Saisir ou choisir un Emoji</label>
+              <button 
+                type="button" 
+                onClick={() => {
+                  if (isEditingEmojis) {
+                    const emojis = (typeof Intl !== "undefined" && Intl.Segmenter 
+                      ? [...new (Intl as any).Segmenter().segment(emojiInputStr)].map(x => x.segment)
+                      : Array.from(emojiInputStr)) as string[];
+                    saveCustomEmojis(emojis);
+                    setIsEditingEmojis(false);
+                  } else {
+                    setEmojiInputStr(customEmojis.join(""));
+                    setIsEditingEmojis(true);
+                  }
+                }}
+                className="text-[9px] font-bold text-emerald-600 hover:underline"
+              >
+                {isEditingEmojis ? "✓ Enregistrer" : "✎ Modifier les suggestions"}
+              </button>
+            </div>
+            
             <div className="flex gap-2 items-center">
               <input
                 type="text"
@@ -159,25 +223,47 @@ const IconPicker = ({
                 value={emoji}
                 onChange={(e) => onChange(e.target.value, "")}
                 placeholder="📦"
-                className={`w-12 text-center text-xl bg-white border border-slate-200 rounded-xl py-1.5 focus:ring-1 focus:outline-none font-bold ${ringColor}`}
+                className={`w-12 text-center text-xl bg-white border border-slate-200 rounded-xl py-1.5 focus:ring-1 focus:outline-none font-bold shrink-0 ${ringColor}`}
               />
-              <div className="flex flex-wrap gap-1">
-                {["🍎", "🥦", "🥩", "🧀", "🍞", "🥛", "🥤", "🧼", "🧴", "❄️", "🍳", "📦"].map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => onChange(preset, "")}
-                    className="w-7 h-7 flex items-center justify-center bg-white hover:bg-slate-50 border border-slate-150 rounded-lg shadow-sm text-sm transition hover:scale-110 active:scale-95"
-                  >
-                    {preset}
-                  </button>
-                ))}
-              </div>
+              
+              {isEditingEmojis ? (
+                 <input
+                   type="text"
+                   value={emojiInputStr}
+                   onChange={(e) => setEmojiInputStr(e.target.value)}
+                   placeholder="Saisissez des emojis..."
+                   className={`flex-1 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-sm focus:ring-1 focus:outline-none font-medium ${ringColor}`}
+                   autoFocus
+                 />
+              ) : (
+                <div className="flex flex-wrap gap-1">
+                  {customEmojis.map((preset, idx) => (
+                    <button
+                      key={idx + preset}
+                      type="button"
+                      onClick={() => onChange(preset, "")}
+                      className="w-7 h-7 flex items-center justify-center bg-white hover:bg-slate-50 border border-slate-150 rounded-lg shadow-sm text-sm transition hover:scale-110 active:scale-95"
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                  {emoji && !customEmojis.includes(emoji) && (
+                    <button
+                      type="button"
+                      onClick={() => saveCustomEmojis([emoji, ...customEmojis])}
+                      className="w-7 h-7 flex items-center justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200 rounded-lg shadow-sm text-xs font-bold transition hover:scale-110 active:scale-95"
+                      title="Ajouter aux suggestions"
+                    >
+                      +
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ) : (
           <div className="space-y-2">
-            <label className="block text-[9px] font-bold text-slate-400 uppercase">Adresse URL ou Importer un fichier</label>
+            <label className="block text-[9px] font-bold text-slate-400 uppercase">Adresse URL, Importer ou Prendre une photo</label>
             <div className="flex gap-2 items-center">
               <input
                 type="text"
@@ -186,22 +272,41 @@ const IconPicker = ({
                 onChange={(e) => onChange(emoji, e.target.value)}
                 className={`flex-1 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs focus:ring-1 focus:outline-none min-w-0 font-medium ${ringColor}`}
               />
-              <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl px-2.5 py-1.5 text-[10px] font-bold text-slate-600 shrink-0 transition flex items-center gap-1 shadow-sm">
-                📁 Importer
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      handleUploadBase64(file, (base64) => {
-                        onChange(emoji, base64);
-                      });
-                    }
-                  }}
-                />
-              </label>
+              <div className="flex gap-1 shrink-0">
+                <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl px-2 py-1.5 text-[10px] font-bold text-slate-600 transition flex items-center shadow-sm" title="Importer une image">
+                  📁
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleUploadBase64(file, (base64) => {
+                          onChange(emoji, base64);
+                        });
+                      }
+                    }}
+                  />
+                </label>
+                <label className="cursor-pointer bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl px-2 py-1.5 text-[10px] font-bold text-emerald-700 transition flex items-center shadow-sm" title="Prendre une photo">
+                  📷
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleUploadBase64(file, (base64) => {
+                          onChange(emoji, base64);
+                        });
+                      }
+                    }}
+                  />
+                </label>
+              </div>
             </div>
             {imageUrl && (
               <button
@@ -239,6 +344,7 @@ export interface Product {
   id: string;
   name: string;
   emoji: string;
+  barcode?: string;
   category: string; // ID de la catégorie
   stockLocation?: string; // ID du lieu de stockage (ex: frigo, cave, etc.)
   quantity: number; // Quantité en stock
@@ -398,6 +504,8 @@ const CLIENT_DEFAULT_PRODUCTS = [
   }
 ];
 
+import { BarcodeScanner } from "./components/BarcodeScanner";
+
 export default function App() {
   // ==========================================
   // ÉTATS GLOBAUX DE L'APPLICATION
@@ -432,6 +540,7 @@ export default function App() {
   const [newWorkspaceId, setNewWorkspaceId] = useState<string>("");
   const [newWorkspaceName, setNewWorkspaceName] = useState<string>("");
   const [selectedStockFilter, setSelectedStockFilter] = useState<string>("all");
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all");
 
   // UI / Navigation & Filtres
   const [activeMainTab, setActiveMainTab] = useState<"overview" | "inventory" | "stats" | "expiry" | "reglage">("overview");
@@ -522,6 +631,7 @@ export default function App() {
   const [isProcessingAI, setIsProcessingAI] = useState<boolean>(false);
   const [aiPreviewProducts, setAiPreviewProducts] = useState<any[]>([]);
   const [showAiPreviewModal, setShowAiPreviewModal] = useState<boolean>(false);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState<boolean>(false);
   
   // Formulaire d'édition / création de produit temporaire
   const [prodForm, setProdForm] = useState({
@@ -533,7 +643,10 @@ export default function App() {
     unit: "pièces",
     price: 0,
     expiryDates: [] as ExpiryDate[],
-    imageUrl: ""
+    imageUrl: "",
+    barcode: "",
+    stockLocation: "cuisine",
+    notes: ""
   });
   
   // Formulaire d'ajout de date de péremption temporaire (dans l'édition)
@@ -920,6 +1033,7 @@ export default function App() {
     setProdForm({
       name: "",
       emoji: "📦",
+      barcode: "",
       category: categories[0]?.id || "autre",
       stockLocation: stockLocations[0]?.id || "cuisine",
       quantity: 1,
@@ -939,6 +1053,7 @@ export default function App() {
     setProdForm({
       name: product.name || "",
       emoji: product.emoji || "📦",
+      barcode: product.barcode || "",
       category: product.category || "autre",
       stockLocation: product.stockLocation || stockLocations[0]?.id || "cuisine",
       quantity: product.quantity !== undefined && product.quantity !== null ? product.quantity : 1,
@@ -967,6 +1082,7 @@ export default function App() {
             ...p,
             name: prodForm.name.trim(),
             emoji: prodForm.emoji,
+            barcode: prodForm.barcode,
             category: prodForm.category,
             stockLocation: prodForm.stockLocation,
             quantity: Number(prodForm.quantity),
@@ -986,6 +1102,7 @@ export default function App() {
         id: "prod-" + Date.now(),
         name: prodForm.name.trim(),
         emoji: prodForm.emoji,
+        barcode: prodForm.barcode,
         category: prodForm.category,
         stockLocation: prodForm.stockLocation,
         quantity: Number(prodForm.quantity),
@@ -1515,7 +1632,7 @@ export default function App() {
   const handleCopyReport = (type: "stock" | "shopping") => {
     let text = "";
     if (type === "stock") {
-      text = `📦 PANTRYPAL - RAPPORT DE STOCK (${new Date().toLocaleDateString("fr-FR")})\n`;
+      text = `📦 CHECK&RELOAD - RAPPORT DE STOCK (${new Date().toLocaleDateString("fr-FR")})\n`;
       text += `Lien de la liste : ${window.location.origin}/#${listId}\n\n`;
       categories.forEach((cat) => {
         const catProds = products.filter((p) => p.category === cat.id);
@@ -1529,7 +1646,7 @@ export default function App() {
         }
       });
     } else {
-      text = `📝 PANTRYPAL - LISTE DE COURSES INTÉLLIGENTE (${new Date().toLocaleDateString("fr-FR")})\n`;
+      text = `📝 CHECK&RELOAD - LISTE DE COURSES INTÉLLIGENTE (${new Date().toLocaleDateString("fr-FR")})\n`;
       text += `Lien de la liste : ${window.location.origin}/#${listId}\n`;
       text += `Estimation totale du panier : ${totalEstimatedShoppingPrice.toFixed(2)}€\n\n`;
       
@@ -1723,7 +1840,15 @@ export default function App() {
     const matchesCategory = selectedCategoryTab === "all" || p.category === selectedCategoryTab;
     const matchesStock = selectedStockFilter === "all" || p.stockLocation === selectedStockFilter;
     const matchesSearch = normalizeStr(p.name).includes(normalizeStr(searchQuery));
-    return matchesCategory && matchesStock && matchesSearch;
+    
+    let matchesStatus = true;
+    if (selectedStatusFilter === "out_of_stock") {
+      matchesStatus = p.quantity === 0;
+    } else if (selectedStatusFilter === "low_stock") {
+      matchesStatus = p.quantity < p.minQuantity;
+    }
+    
+    return matchesCategory && matchesStock && matchesSearch && matchesStatus;
   });
 
   // Trier les produits filtrés
@@ -1773,12 +1898,15 @@ export default function App() {
           ========================================== */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 py-3 sm:px-6 flex flex-col sm:flex-row gap-3 items-center justify-between shrink-0 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white text-xl shadow-md">
-            🛒
-          </div>
+          <img 
+            src="/icon.svg" 
+            alt="Check&amp;Reload Logo" 
+            className="w-10 h-10 rounded-xl shadow-md object-cover bg-slate-900 border border-slate-700/20"
+            referrerPolicy="no-referrer"
+          />
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-emerald-950">PantryPal</h1>
+              <h1 className="text-xl font-bold tracking-tight text-emerald-950">Check&amp;Reload</h1>
               <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">Pro Collaborative</span>
             </div>
             <div className="flex items-center gap-1.5 mt-0.5">
@@ -2006,8 +2134,15 @@ export default function App() {
           {/* Indicateurs Clés (Bento-style Cards) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Taux de santé du stock */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm flex flex-col justify-between">
-              <div className="flex items-start justify-between">
+            <button
+              onClick={() => {
+                setActiveMainTab("inventory");
+                setSelectedStatusFilter("all");
+                setSelectedCategoryTab("all");
+              }}
+              className="bg-white border border-slate-200 hover:border-emerald-300 hover:shadow-md transition text-left rounded-3xl p-5 shadow-sm flex flex-col justify-between"
+            >
+              <div className="flex items-start justify-between w-full">
                 <div>
                   <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Santé du Stock</p>
                   <p className="text-3xl font-black mt-2 text-slate-900">
@@ -2019,7 +2154,7 @@ export default function App() {
                 <span className="p-2 bg-emerald-50 text-emerald-600 rounded-2xl text-xl font-bold">🩺</span>
               </div>
               
-              <div className="mt-4">
+              <div className="mt-4 w-full">
                 <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-1.5">
                   <div 
                     className="bg-emerald-500 h-full rounded-full transition-all duration-500"
@@ -2032,11 +2167,18 @@ export default function App() {
                   {products.filter(p => p.quantity >= p.minQuantity).length} références optimales sur {products.length}.
                 </p>
               </div>
-            </div>
+            </button>
 
             {/* Valeur totale du stock */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm flex flex-col justify-between">
-              <div className="flex items-start justify-between">
+            <button
+              onClick={() => {
+                setActiveMainTab("inventory");
+                setSelectedStatusFilter("all");
+                setSelectedCategoryTab("all");
+              }}
+              className="bg-white border border-slate-200 hover:border-amber-300 hover:shadow-md transition text-left rounded-3xl p-5 shadow-sm flex flex-col justify-between"
+            >
+              <div className="flex items-start justify-between w-full">
                 <div>
                   <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Valeur des Réserves</p>
                   <p className="text-3xl font-black mt-2 text-slate-900">
@@ -2048,11 +2190,18 @@ export default function App() {
               <p className="text-[10px] text-slate-400 mt-4 leading-relaxed">
                 Somme accumulée de la valeur de tous vos ingrédients actuellement disponibles en rayon.
               </p>
-            </div>
+            </button>
 
             {/* Articles en rupture totale */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm flex flex-col justify-between">
-              <div className="flex items-start justify-between">
+            <button
+              onClick={() => {
+                setActiveMainTab("inventory");
+                setSelectedStatusFilter("out_of_stock");
+                setSelectedCategoryTab("all");
+              }}
+              className="bg-white border border-slate-200 hover:border-rose-300 hover:shadow-md transition text-left rounded-3xl p-5 shadow-sm flex flex-col justify-between"
+            >
+              <div className="flex items-start justify-between w-full">
                 <div>
                   <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Ruptures de Stock</p>
                   <p className="text-3xl font-black mt-2 text-rose-600">
@@ -2064,11 +2213,18 @@ export default function App() {
               <p className="text-[10px] text-slate-400 mt-4 leading-relaxed">
                 Produits avec un stock de zéro, ajoutés automatiquement à votre liste de courses.
               </p>
-            </div>
+            </button>
 
             {/* Volume Global */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm flex flex-col justify-between">
-              <div className="flex items-start justify-between">
+            <button
+              onClick={() => {
+                setActiveMainTab("inventory");
+                setSelectedStatusFilter("low_stock");
+                setSelectedCategoryTab("all");
+              }}
+              className="bg-white border border-slate-200 hover:border-amber-300 hover:shadow-md transition text-left rounded-3xl p-5 shadow-sm flex flex-col justify-between"
+            >
+              <div className="flex items-start justify-between w-full">
                 <div>
                   <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Articles en Alerte</p>
                   <p className="text-3xl font-black mt-2 text-amber-500">
@@ -2080,7 +2236,7 @@ export default function App() {
               <p className="text-[10px] text-slate-400 mt-4 leading-relaxed">
                 Produits sous leur seuil d'alerte, nécessitant d'être réapprovisionnés prochainement.
               </p>
-            </div>
+            </button>
           </div>
 
           {/* Grille principale : Résumé par catégories & Alertes prioritaires */}
@@ -2124,7 +2280,15 @@ export default function App() {
                   }
 
                   return (
-                    <div key={cat.id} className="border border-slate-100 rounded-2xl p-4 hover:bg-slate-50/50 transition">
+                    <button 
+                      key={cat.id} 
+                      onClick={() => {
+                        setActiveMainTab("inventory");
+                        setSelectedStatusFilter("all");
+                        setSelectedCategoryTab(cat.id);
+                      }}
+                      className="w-full text-left border border-slate-100 rounded-2xl p-4 hover:bg-slate-50/50 hover:border-emerald-200 cursor-pointer transition block"
+                    >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2">
                           <span className="text-xl">{cat.emoji}</span>
@@ -2155,7 +2319,7 @@ export default function App() {
                       ) : (
                         <div className="w-full bg-slate-100 h-1.5 rounded-full border border-dashed border-slate-200" />
                       )}
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -2170,9 +2334,16 @@ export default function App() {
                   <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
                     <span className="text-rose-500">⚠️</span> Alertes & Ruptures critiques
                   </h3>
-                  <span className="text-[10px] bg-rose-50 text-rose-700 px-2 py-0.5 rounded-full font-bold">
-                    {products.filter(p => p.quantity < p.minQuantity).length} alertes
-                  </span>
+                  <button
+                    onClick={() => {
+                      setActiveMainTab("inventory");
+                      setSelectedStatusFilter("low_stock");
+                      setSelectedCategoryTab("all");
+                    }}
+                    className="text-[10px] bg-rose-50 text-rose-700 px-2 py-0.5 rounded-full font-bold hover:bg-rose-100 transition cursor-pointer"
+                  >
+                    {products.filter(p => p.quantity < p.minQuantity).length} alertes →
+                  </button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto space-y-2 pr-1">
@@ -2462,6 +2633,49 @@ export default function App() {
               >
                 <Settings className="w-3 h-3 text-slate-500" />
                 <span>Gérer les stocks</span>
+              </button>
+            </div>
+
+            {/* Statut de filtrage rapide (Stock) */}
+            <div className="px-4 py-2 bg-amber-50/30 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto">
+              <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider select-none pr-1">Statut :</span>
+              <button
+                onClick={() => setSelectedStatusFilter("all")}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+                  selectedStatusFilter === "all"
+                    ? "bg-slate-700 text-white shadow-sm"
+                    : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                Tous les statuts
+              </button>
+              <button
+                onClick={() => setSelectedStatusFilter("out_of_stock")}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1 transition ${
+                  selectedStatusFilter === "out_of_stock"
+                    ? "bg-rose-600 text-white shadow-sm"
+                    : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                <span>🚨</span>
+                <span>En rupture</span>
+                <span className={`text-[9px] px-1 rounded-full ${selectedStatusFilter === "out_of_stock" ? 'bg-rose-800 text-rose-100' : 'bg-slate-100 text-slate-500'}`}>
+                  {products.filter(p => p.quantity === 0).length}
+                </span>
+              </button>
+              <button
+                onClick={() => setSelectedStatusFilter("low_stock")}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1 transition ${
+                  selectedStatusFilter === "low_stock"
+                    ? "bg-amber-500 text-white shadow-sm"
+                    : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                <span>⚠️</span>
+                <span>Stock bas</span>
+                <span className={`text-[9px] px-1 rounded-full ${selectedStatusFilter === "low_stock" ? 'bg-amber-700 text-amber-100' : 'bg-slate-100 text-slate-500'}`}>
+                  {products.filter(p => p.quantity < p.minQuantity).length}
+                </span>
               </button>
             </div>
 
@@ -3852,7 +4066,14 @@ export default function App() {
                 </h2>
                 <p className="text-[10px] text-slate-400">Modifiez, triez et supprimez vos produits en lot ou individuellement.</p>
               </div>
-              <div className="flex gap-1.5 self-start sm:self-auto">
+              <div className="flex gap-1.5 self-start sm:self-auto flex-wrap justify-end">
+                <button
+                  onClick={() => setShowBarcodeScanner(true)}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm transition"
+                >
+                  <Camera className="w-3.5 h-3.5 text-indigo-200" />
+                  <span>Scanner un produit</span>
+                </button>
                 <button
                   onClick={() => {
                     setBulkAddCategory(categories[0]?.id || "autre");
@@ -3870,12 +4091,14 @@ export default function App() {
                     setProdForm({
                       name: "",
                       category: categories[0]?.id || "autre",
+                      stockLocation: stockLocations[0]?.id || "cuisine",
                       quantity: 1,
                       minQuantity: 1,
                       unit: "pièces",
                       price: 0,
                       notes: "",
                       emoji: "📦",
+                      imageUrl: "",
                       expiryDates: []
                     });
                     setIsProductModalOpen(true);
@@ -4108,12 +4331,14 @@ export default function App() {
                                 setProdForm({
                                   name: p.name || "",
                                   category: p.category || "autre",
+                                  stockLocation: p.stockLocation || stockLocations[0]?.id || "cuisine",
                                   quantity: p.quantity !== undefined && p.quantity !== null ? p.quantity : 1,
                                   minQuantity: p.minQuantity !== undefined && p.minQuantity !== null ? p.minQuantity : 1,
                                   unit: p.unit || "pièces",
                                   price: p.price || 0,
                                   notes: p.notes || "",
                                   emoji: p.emoji || "📦",
+                                  imageUrl: p.imageUrl || "",
                                   expiryDates: p.expiryDates || []
                                 });
                                 setIsProductModalOpen(true);
@@ -4152,7 +4377,7 @@ export default function App() {
 
       {/* Footer Global */}
       <footer className="max-w-7xl mx-auto w-full px-4 mt-6 text-center text-slate-400 text-[11px] flex flex-col sm:flex-row items-center justify-between gap-2">
-        <p>© 2026 PantryPal Collaborative - Code clair et pédagogique.</p>
+        <p>© 2026 Check&amp;Reload Collaborative - Solution moderne de gestion de stock.</p>
         <p className="font-mono bg-slate-100 text-slate-500 px-2 py-0.5 rounded border border-slate-200">
           Système local-first sauvegardé en temps réel.
         </p>
@@ -4771,7 +4996,7 @@ export default function App() {
               <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                 <div>
                   <h3 className="font-bold text-slate-800 text-sm">Installer l'application Mobile 📲</h3>
-                  <p className="text-[10px] text-slate-500">PantryPal - Gestion de Stock & Courses</p>
+                  <p className="text-[10px] text-slate-500">Check&amp;Reload - Gestion de Stock &amp; Courses</p>
                 </div>
                 <button
                   onClick={() => setIsPwaModalOpen(false)}
@@ -4784,9 +5009,16 @@ export default function App() {
               {/* Body */}
               <div className="p-5 space-y-4">
                 <div className="text-center">
-                  <span className="text-4xl">🍳</span>
+                  <div className="flex justify-center mb-2">
+                    <img 
+                      src="/icon.svg" 
+                      alt="Check&amp;Reload Logo" 
+                      className="w-16 h-16 rounded-2xl shadow-lg bg-slate-900 border border-slate-700/20"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
                   <p className="text-xs text-slate-600 mt-2">
-                    Ajoutez PantryPal à l'écran d'accueil de votre téléphone pour l'utiliser comme une vraie application : plein écran, sans barre d'adresse, et plus rapide !
+                    Ajoutez Check&amp;Reload à l'écran d'accueil de votre téléphone pour l'utiliser comme une vraie application : plein écran, sans barre d'adresse, et plus rapide !
                   </p>
                 </div>
 
@@ -4808,7 +5040,7 @@ export default function App() {
                       className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-sm flex items-center justify-center gap-2"
                     >
                       <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
-                      <span>Installer PantryPal maintenant</span>
+                      <span>Installer Check&amp;Reload maintenant</span>
                     </button>
                   </div>
                 ) : (
@@ -5806,6 +6038,53 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+      {showBarcodeScanner && (
+        <BarcodeScanner
+          onClose={() => setShowBarcodeScanner(false)}
+          onResult={(result) => {
+            setShowBarcodeScanner(false);
+            
+            // Chercher si on l'a déjà dans notre base de données locale par code barre
+            const existingProduct = result.barcode ? products.find(p => p.barcode === result.barcode) : null;
+            
+            if (existingProduct) {
+              setEditingProduct(existingProduct);
+              setProdForm({
+                name: existingProduct.name || "",
+                category: existingProduct.category || "autre",
+                stockLocation: existingProduct.stockLocation || stockLocations[0]?.id || "cuisine",
+                quantity: existingProduct.quantity !== undefined && existingProduct.quantity !== null ? existingProduct.quantity : 1,
+                minQuantity: existingProduct.minQuantity !== undefined && existingProduct.minQuantity !== null ? existingProduct.minQuantity : 1,
+                unit: existingProduct.unit || "pièces",
+                price: existingProduct.price || 0,
+                notes: existingProduct.notes || "",
+                emoji: existingProduct.emoji || "📦",
+                barcode: existingProduct.barcode || "",
+                imageUrl: existingProduct.imageUrl || "",
+                expiryDates: existingProduct.expiryDates || []
+              });
+            } else {
+              setEditingProduct(null);
+              setProdForm({
+                name: result.name || "",
+                category: result.category || categories[0]?.id || "autre",
+                stockLocation: stockLocations[0]?.id || "cuisine",
+                quantity: result.quantity ? Number(result.quantity) : 1,
+                minQuantity: 1,
+                unit: result.unit || "pièces",
+                price: 0,
+                notes: "",
+                emoji: "📦",
+                barcode: result.barcode || "",
+                imageUrl: result.imageUrl || "",
+                expiryDates: []
+              });
+            }
+            setIsProductModalOpen(true);
+          }}
+        />
+      )}
 
     </div>
   );

@@ -10,50 +10,55 @@
       <stop offset="0%" stop-color="#059669" />
       <stop offset="100%" stop-color="#10b981" />
     </linearGradient>
-    <!-- Amber Accent Gradient -->
-    <linearGradient id="amberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f59e0b" />
-      <stop offset="100%" stop-color="#d97706" />
-    </linearGradient>
-    <!-- Glass Reflections -->
-    <linearGradient id="glassGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.15" />
-      <stop offset="30%" stop-color="#ffffff" stop-opacity="0.05" />
-      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.0" />
+    <!-- Soft White/Silver Gradient for Cardboard Box -->
+    <linearGradient id="silverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="100%" stop-color="#cbd5e1" />
     </linearGradient>
   </defs>
 
-  <!-- Maskable background (MUST cover the entire canvas up to 100%) -->
+  <!-- Maskable background (MUST cover the entire canvas without rx border radius) -->
   <rect width="512" height="512" fill="url(#bgGrad)" />
 
-  <!-- Main Container: Scaled down (scale 0.76) and centered to strictly respect the safe-zone boundaries -->
-  <g transform="translate(132, 114) scale(0.76)">
-    <!-- Lid of the pantry jar -->
-    <rect x="64" y="16" width="128" height="24" rx="12" fill="url(#emeraldGrad)" />
-    <rect x="80" y="40" width="96" height="12" rx="4" fill="#047857" />
+  <!-- Main Illustration Group: Scaled down (scale 0.78) and centered to respect the safe-zone boundaries -->
+  <g transform="translate(256, 256) scale(0.78) translate(-256, -256)">
+    <!-- Subtle Outer Glowing Ring -->
+    <circle cx="256" cy="256" r="210" fill="none" stroke="url(#emeraldGrad)" stroke-width="3" stroke-opacity="0.15" stroke-dasharray="12 12" />
 
-    <!-- Jar Body (Glass Outlines) -->
-    <path d="M48 64 H208 C224 64, 240 80, 240 104 V264 C240 288, 224 304, 208 304 H48 C32 304, 16 288, 16 264 V104 C16 80, 32 64, 48 64 Z" fill="none" stroke="#e2e8f0" stroke-width="12" stroke-linejoin="round" />
+    <!-- 1. The Shopping Bag peeking out of the box -->
+    <!-- Handles -->
+    <path d="M 226 180 C 226 135, 286 135, 286 180" fill="none" stroke="url(#emeraldGrad)" stroke-width="9" stroke-linecap="round" />
+    <path d="M 234 180 C 234 145, 278 145, 278 180" fill="none" stroke="#10b981" stroke-width="5" stroke-linecap="round" opacity="0.8" />
+
+    <!-- Items inside the bag -->
+    <!-- Yellow Orange/Lemon -->
+    <circle cx="282" cy="165" r="22" fill="#fbbf24" />
+    <!-- Blue carton box -->
+    <rect x="204" y="135" width="46" height="70" rx="8" fill="#38bdf8" />
+    <line x1="214" y1="155" x2="240" y2="155" stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
+    <line x1="214" y1="167" x2="232" y2="167" stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
+
+    <!-- The Bag Body -->
+    <rect x="186" y="180" width="140" height="150" rx="16" fill="#1e293b" stroke="#475569" stroke-width="10" />
+
+    <!-- 2. The Open Cardboard Shipping Box (layered in front of the bag) -->
+    <!-- Left Flap -->
+    <path d="M 146 270 L 86 210 L 146 235 Z" fill="#334155" stroke="url(#silverGrad)" stroke-width="10" stroke-linejoin="round" />
     
-    <!-- Food Items Inside (Stylized Silhouette) -->
-    <!-- Apple / Fruit -->
-    <circle cx="80" cy="240" r="32" fill="url(#amberGrad)" />
-    <path d="M80 208 C80 198, 90 192, 96 192" fill="none" stroke="#f59e0b" stroke-width="6" stroke-linecap="round" />
-    <!-- Leaf -->
-    <path d="M84 206 C90 190, 110 186, 114 198 C114 214, 98 214, 84 206 Z" fill="#10b981" />
+    <!-- Right Flap -->
+    <path d="M 366 270 L 426 210 L 366 235 Z" fill="#334155" stroke="url(#silverGrad)" stroke-width="10" stroke-linejoin="round" />
 
-    <!-- Carton / Product Box -->
-    <rect x="136" y="144" width="64" height="120" rx="8" fill="#38bdf8" />
-    <!-- Product Label -->
-    <rect x="146" y="176" width="44" height="40" rx="4" fill="#ffffff" />
-    <line x1="152" y1="188" x2="184" y2="188" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round" />
-    <line x1="152" y1="200" x2="174" y2="200" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round" />
+    <!-- Box Front Face -->
+    <rect x="146" y="270" width="220" height="130" rx="14" fill="#0f172a" stroke="url(#silverGrad)" stroke-width="12" fill-opacity="0.95" stroke-linejoin="round" />
 
-    <!-- Sparkles of freshness -->
-    <path d="M190 80 L195 90 L205 95 L195 100 L190 110 L185 100 L175 95 L185 90 Z" fill="#38bdf8" />
-    <path d="M60 110 L63 115 L68 118 L63 121 L60 126 L57 121 L52 118 L57 115 Z" fill="#f59e0b" />
+    <!-- 3. Checkmark Emblem in the Center of the Box -->
+    <circle cx="256" cy="335" r="36" fill="url(#emeraldGrad)" />
+    <!-- Checkmark Path -->
+    <path d="M 238 335 L 250 347 L 274 323" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
 
-    <!-- Glass Reflection Overlay -->
-    <path d="M16 104 V264 C16 288, 32 304, 48 304 H110 V64 H48 C32 64, 16 80, 16 104 Z" fill="url(#glassGrad)" />
+    <!-- 4. Reload Circular Loop (top-right side) -->
+    <path d="M 380 150 A 32 32 0 1 0 345 178" fill="none" stroke="url(#emeraldGrad)" stroke-width="9" stroke-linecap="round" />
+    <!-- Reload Arrowhead -->
+    <path d="M 368 142 L 380 150 L 392 138" fill="none" stroke="url(#emeraldGrad)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
   </g>
 </svg>
